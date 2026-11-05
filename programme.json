@@ -1,7 +1,7 @@
 {
- "version": 2,
+ "version": 3,
  "date": "2026-11-05",
- "note": "tout avancé d'une semaine : décharge en S45, tests lundi, bloc 2 dès S46",
+ "note": "charge du squat calée en S46",
  "set": {
   "config": {
    "main": {
@@ -844,7 +844,7 @@
         {
          "items": [
           {
-           "cue": "2 reps en réserve. Cale la charge en S47, puis +2,5 kg par semaine si la vitesse reste bonne",
+           "cue": "2 reps en réserve. Cale la charge en S46 (après les tests), puis +2,5 kg par semaine si la vitesse reste bonne",
            "ex": "squat",
            "id": "squat",
            "link": "https://www.youtube.com/results?search_query=back+squat+technique",
@@ -2106,7 +2106,7 @@
        {
         "items": [
          {
-          "cue": "2 reps en réserve. Cale la charge en S47, puis +2,5 kg par semaine si la vitesse reste bonne",
+          "cue": "2 reps en réserve. Cale la charge en S46 (après les tests), puis +2,5 kg par semaine si la vitesse reste bonne",
           "ex": "squat",
           "id": "squat",
           "link": "https://www.youtube.com/results?search_query=back+squat+technique",
