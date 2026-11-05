@@ -1,5 +1,5 @@
 /* Carnet Parkour : fonctionne hors ligne. Changer VERSION à chaque mise à jour du code. */
-const VERSION = 'carnet-2026-10-26-1';
+const VERSION = 'carnet-2026-11-05-1';
 const SHELL = [
   './', 'index.html', 'lib/supabase.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',

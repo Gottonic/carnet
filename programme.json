@@ -1,7 +1,7 @@
 {
- "version": 3,
+ "version": 4,
  "date": "2026-11-05",
- "note": "charge du squat calée en S46",
+ "note": "progression des charges : l'app propose la charge suivante",
  "set": {
   "config": {
    "main": {
@@ -670,7 +670,7 @@
    "bl-2": {
     "deload": "2026-W51",
     "end": "2026-12-20",
-    "goal": "Le bas passe en force max, le haut en puissance (contraste lourd puis explosif). Sprints courts et hops ouvrent la séance du bas.",
+    "goal": "Le bas passe en force max, le haut en puissance (contraste lourd puis explosif). Sprints courts et hops ouvrent la séance du bas. Les reps du bas descendent au fil des semaines (5 → 4 → 3) pendant que la charge monte.",
     "name": "Bloc 2",
     "start": "2026-11-09",
     "template": {
@@ -710,7 +710,8 @@
            "load": "+16 à +18 kg",
            "name": "Tractions serrées lestées",
            "reps": "3",
-           "sets": 4
+           "sets": 4,
+           "step": 1
           },
           {
            "cue": "Juste après A1 : traction explosive puis maintien. Arrête dès que la vitesse baisse",
@@ -730,8 +731,16 @@
            "link": "https://www.youtube.com/results?search_query=weighted+dips+technique",
            "load": "+16 à +18 kg",
            "name": "Dips lestés",
-           "reps": "3–4",
-           "sets": 4
+           "reps": "4",
+           "sets": 4,
+           "wave": [
+            "4",
+            "4",
+            "3",
+            "3",
+            "3"
+           ],
+           "step": 1
           },
           {
            "cue": "Juste après A3, sur des disques",
@@ -844,14 +853,22 @@
         {
          "items": [
           {
-           "cue": "2 reps en réserve. Cale la charge en S46 (après les tests), puis +2,5 kg par semaine si la vitesse reste bonne",
+           "cue": "2 reps en réserve. Si la vitesse baisse, garde la charge la semaine suivante",
            "ex": "squat",
            "id": "squat",
            "link": "https://www.youtube.com/results?search_query=back+squat+technique",
            "load": "≈ 72–75 kg",
            "name": "Back squat",
-           "reps": "4–5",
-           "sets": 4
+           "reps": "5",
+           "sets": 4,
+           "wave": [
+            "5",
+            "5",
+            "4",
+            "4",
+            "3"
+           ],
+           "step": 2.5
           },
           {
            "cue": "Bassin à plat, lourd mais contrôlé",
@@ -861,7 +878,15 @@
            "load": "≈ 35 kg",
            "name": "RDL unilatéral barre",
            "reps": "6 / jambe",
-           "sets": 4
+           "sets": 4,
+           "wave": [
+            "6 / jambe",
+            "6 / jambe",
+            "5 / jambe",
+            "5 / jambe",
+            "4 / jambe"
+           ],
+           "step": 2.5
           }
          ],
          "kind": "superset",
@@ -878,7 +903,15 @@
            "load": "≈ 78–80 kg",
            "name": "Soulevé de terre roumain",
            "reps": "5",
-           "sets": 3
+           "sets": 3,
+           "wave": [
+            "5",
+            "5",
+            "4",
+            "4",
+            "3"
+           ],
+           "step": 2.5
           },
           {
            "cue": "Un pilier pour les fessiers et la stabilité sur une jambe",
@@ -887,8 +920,16 @@
            "img": "38d5674dc3bba8efa8eef61a660c04eb",
            "load": "≈ 45 kg",
            "name": "Fente arrière lourde barre",
-           "reps": "5–6 / jambe",
-           "sets": 3
+           "reps": "6 / jambe",
+           "sets": 3,
+           "wave": [
+            "6 / jambe",
+            "6 / jambe",
+            "5 / jambe",
+            "5 / jambe",
+            "4 / jambe"
+           ],
+           "step": 2.5
           }
          ],
          "kind": "superset",
@@ -1972,7 +2013,8 @@
           "load": "+16 à +18 kg",
           "name": "Tractions serrées lestées",
           "reps": "3",
-          "sets": 4
+          "sets": 4,
+          "step": 1
          },
          {
           "cue": "Juste après A1 : traction explosive puis maintien. Arrête dès que la vitesse baisse",
@@ -1992,8 +2034,16 @@
           "link": "https://www.youtube.com/results?search_query=weighted+dips+technique",
           "load": "+16 à +18 kg",
           "name": "Dips lestés",
-          "reps": "3–4",
-          "sets": 4
+          "reps": "4",
+          "sets": 4,
+          "wave": [
+           "4",
+           "4",
+           "3",
+           "3",
+           "3"
+          ],
+          "step": 1
          },
          {
           "cue": "Juste après A3, sur des disques",
@@ -2106,14 +2156,22 @@
        {
         "items": [
          {
-          "cue": "2 reps en réserve. Cale la charge en S46 (après les tests), puis +2,5 kg par semaine si la vitesse reste bonne",
+          "cue": "2 reps en réserve. Si la vitesse baisse, garde la charge la semaine suivante",
           "ex": "squat",
           "id": "squat",
           "link": "https://www.youtube.com/results?search_query=back+squat+technique",
           "load": "≈ 72–75 kg",
           "name": "Back squat",
-          "reps": "4–5",
-          "sets": 4
+          "reps": "5",
+          "sets": 4,
+          "wave": [
+           "5",
+           "5",
+           "4",
+           "4",
+           "3"
+          ],
+          "step": 2.5
          },
          {
           "cue": "Bassin à plat, lourd mais contrôlé",
@@ -2123,7 +2181,15 @@
           "load": "≈ 35 kg",
           "name": "RDL unilatéral barre",
           "reps": "6 / jambe",
-          "sets": 4
+          "sets": 4,
+          "wave": [
+           "6 / jambe",
+           "6 / jambe",
+           "5 / jambe",
+           "5 / jambe",
+           "4 / jambe"
+          ],
+          "step": 2.5
          }
         ],
         "kind": "superset",
@@ -2140,7 +2206,15 @@
           "load": "≈ 78–80 kg",
           "name": "Soulevé de terre roumain",
           "reps": "5",
-          "sets": 3
+          "sets": 3,
+          "wave": [
+           "5",
+           "5",
+           "4",
+           "4",
+           "3"
+          ],
+          "step": 2.5
          },
          {
           "cue": "Un pilier pour les fessiers et la stabilité sur une jambe",
@@ -2149,8 +2223,16 @@
           "img": "38d5674dc3bba8efa8eef61a660c04eb",
           "load": "≈ 45 kg",
           "name": "Fente arrière lourde barre",
-          "reps": "5–6 / jambe",
-          "sets": 3
+          "reps": "6 / jambe",
+          "sets": 3,
+          "wave": [
+           "6 / jambe",
+           "6 / jambe",
+           "5 / jambe",
+           "5 / jambe",
+           "4 / jambe"
+          ],
+          "step": 2.5
          }
         ],
         "kind": "superset",

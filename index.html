@@ -468,9 +468,43 @@ function planOf(id){
   const own = S.data.weeks[id]; const w = weekById(id); const b = w ? blockOf(w) : null;
   const ctx = (S.data.logs[id] && S.data.logs[id].context) || {};
   const keep = ss => (ss || []).filter(x => (!x.onlyIf || ctx[x.onlyIf]) && !(x.hideIf && ctx[x.hideIf]));
-  if (own && own.sessions && own.sessions.length) return { ...own, sessions: keep(own.sessions), fromTemplate:false, block:b };
+  if (own && own.sessions && own.sessions.length) return { ...own, sessions: resolveWeek(keep(own.sessions), w, b, false), fromTemplate:false, block:b };
   const tpl = b && b.template && b.template.sessions ? b.template.sessions : null;
-  return { ...(own || {}), sessions: keep(tpl), fromTemplate: !!tpl, block:b };
+  return { ...(own || {}), sessions: resolveWeek(keep(tpl), w, b, true), fromTemplate: !!tpl, block:b };
+}
+/* Reps qui changent au fil du bloc (it.wave, une valeur par semaine du bloc) et décharge
+   automatique (≈ 45 % de séries en moins, mêmes charges) quand la semaine suit le modèle du bloc. */
+const cutSets = n => Math.max(1, Math.round(n * 0.55));
+function resolveWeek(ss, w, b, fromTpl){
+  if (!w || !b) return ss;
+  const idx = blockWeeks(b).indexOf(w.id); const dl = fromTpl && b.deload === w.id;
+  if (idx < 0) return ss;
+  return ss.map(s => {
+    const hasWave = (s.blocks || []).some(bl => (bl.items || []).some(it => it.wave));
+    if (!hasWave && !dl) return s;
+    return { ...s, title: dl && s.title && !/décharge/i.test(s.title) ? s.title + " (décharge)" : s.title,
+      blocks: (s.blocks || []).map(bl => ({ ...bl, rounds: dl && typeof bl.rounds === "number" ? cutSets(bl.rounds) : bl.rounds,
+        items: (bl.items || []).map(it => {
+          let x = it;
+          if (it.wave && it.wave.length) x = { ...x, reps: it.wave[Math.min(idx, it.wave.length - 1)] };
+          if (dl && typeof x.sets === "number") x = { ...x, sets: cutSets(x.sets) };
+          return x; }) })) };
+  });
+}
+/* Charge proposée : la dernière charge notée sur cet exercice dans le bloc, + la progression prévue (it.step)
+   si les reps prévues ont été faites. Pas de hausse en semaine de décharge. Sinon : la charge du programme. */
+function loadPlan(wk, s, it){
+  const lr = numRange(it.load); if (!lr) return null;
+  const w = weekById(wk); const b = w && blockOf(w); const key = s.id + ":" + it.id;
+  if (b) for (const id of blockWeeks(b).filter(x => x < wk).reverse()) {
+    const a = S.data.logs[id] && S.data.logs[id].actual && S.data.logs[id].actual[key];
+    const v = a && numOrNull(a.load); if (v == null) continue;
+    const pit = itemOf(id, s.id, it.id); const need = pit ? numRange(pit.reps) : null; const got = numOrNull(a.reps);
+    const missed = !!(need && got != null && got < need[0]);
+    const up = it.step && !isDeload(w) && !missed ? it.step : 0;
+    return { base: Math.round((v + up) * 100) / 100, from: id, up, missed };
+  }
+  return { base: lr[0], from: null, up: 0, missed: false };
 }
 const tracked = id => id >= (cfg().trackingFrom || "0000");
 const sessWeight = s => s.weight ?? (s.kind === "endurance" || s.id === "s-pk2" ? 0.7 : 1);
@@ -916,7 +950,7 @@ function saveTest(f, v){
   if (!cur.date) { const t = todayUTC(); cur.date = ds(t >= w.mon && t <= w.sun ? t : addDays(w.mon, 5)); }
   if (v == null) delete cur[f]; else cur[f] = v; put("tests", id, cur);
 }
-function logRow(key, it, a){
+function logRow(key, it, a, lp){
   if (it.tests) return testRow(it);
   const ex = esc(it.ex || it.id); const out = [];
   const plannedSets = typeof it.sets === "number" ? it.sets : null;
@@ -925,12 +959,13 @@ function logRow(key, it, a){
   const measure = it.measure || (/^saut|broad jump/i.test(it.name) ? "cm" : null);
   if (rr && !measure) out.push(chipGroup("Reps", key, ex, "reps", chipRange(rr[0], rr[1]), rr, a.reps));
   if (it.unit !== "reps") {
-    const lr = numRange(it.load); const lest = /^\s*\+/.test(it.load || ""); const base = lr ? lr[0] : null;
+    const lr = numRange(it.load); const lest = /^\s*\+/.test(it.load || ""); const base = lp ? lp.base : lr ? lr[0] : null;
     if (base != null) {
       const step = lest ? 1 : 2.5; const cur = numOrNull(a.load); const shown = cur ?? base;
+      const hint = !lp || !lp.from ? "prévu" : lp.up ? "prévu +" + fmtNum(lp.up, 2) : lp.missed ? "reps à refaire" : "comme " + wkLabel(lp.from);
       out.push(`<div class="lg"><span class="lgl">Charge</span><div class="step" role="group" aria-label="Charge">
         <button data-action="load" data-k="${key}" data-ex="${ex}" data-base="${base}" data-d="${-step}" aria-label="Moins ${step} kg">−</button>
-        <button class="val ${cur == null ? "ghost" : "on"}" data-action="load" data-k="${key}" data-ex="${ex}" data-base="${base}" data-d="0" aria-label="${cur == null ? "Confirmer la charge prévue" : "Effacer"}">${lest ? "+" : ""}${fmtNum(shown,2)} kg${cur == null ? "<small>prévu</small>" : ""}</button>
+        <button class="val ${cur == null ? "ghost" : "on"}" data-action="load" data-k="${key}" data-ex="${ex}" data-base="${base}" data-d="0" aria-label="${cur == null ? "Confirmer la charge prévue" : "Effacer"}">${lest ? "+" : ""}${fmtNum(shown,2)} kg${cur == null ? "<small>" + hint + "</small>" : ""}</button>
         <button data-action="load" data-k="${key}" data-ex="${ex}" data-base="${base}" data-d="${step}" aria-label="Plus ${step} kg">+</button></div></div>`);
     } else out.push(`<div class="lg"><label class="lgl" for="al-${key}">Charge (kg)</label><input id="al-${key}" class="kg" type="text" inputmode="decimal" data-actual="${key}" data-ex="${ex}" data-k="load" value="${a.load ?? ""}"></div>`);
   }
@@ -949,11 +984,13 @@ function cuStrip(key){
 }
 function itemRow(wk, s, it, log, code){
   const key = s.id + ":" + it.id; const a = (log.actual && log.actual[key]) || {};
-  const rx = [it.sets && it.reps ? it.sets + "×" + it.reps : (it.reps || it.sets || ""), it.load ? "@ " + it.load : ""].filter(Boolean).join(" ");
+  const lp = it.load && it.unit !== "reps" && !it.tests ? loadPlan(wk, s, it) : null;
+  const ldTxt = lp && lp.from ? "≈ " + (/^\s*\+/.test(it.load) ? "+" : "") + fmtNum(lp.base, 2) + " kg" : it.load;
+  const rx = [it.sets && it.reps ? it.sets + "×" + it.reps : (it.reps || it.sets || ""), it.load ? "@ " + ldTxt : ""].filter(Boolean).join(" ");
   const link = it.link ? `<a href="${esc(it.link)}" target="_blank" rel="noopener">démo ↗</a>` : "";
   const zk = wk + ":" + key; const big = S.ui.zoom === zk;
   const thumb = it.img ? `<button class="thumb ${big ? "big" : ""}" data-action="zoom" data-k="${esc(zk)}" aria-label="${big ? "Réduire" : "Agrandir"} l'image : ${esc(it.name)}"><img src="${BLANK}" data-mpath="${esc(mediaPath(it.img))}" alt="${esc(it.name)}"></button>` : "";
-  const inputs = it.log === false && !it.tests ? "" : logRow(key, it, a);
+  const inputs = it.log === false && !it.tests ? "" : logRow(key, it, a, lp);
   return `<div class="item ${it.img ? "has-img" : ""} ${big ? "zoomed" : ""}">
     <div class="nmcell">${code ? `<span class="code">${code}</span>` : ""}${thumb}<div><div class="nm">${esc(it.name)}${link}</div>${it.cue ? `<div class="cue">${esc(it.cue)}</div>` : ""}</div></div>
     <div class="rx">${esc(rx) || "—"}${it.rest ? `<small>repos ${esc(it.rest)}</small>` : ""}${it.rest && restSec(it.rest) ? `<button class="tbtn" data-action="timer" data-s="${restSec(it.rest)}" data-l="${esc(it.name)}">⏱ ${fmtSec(restSec(it.rest))}</button>` : ""}</div>
