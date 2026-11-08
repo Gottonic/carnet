@@ -446,6 +446,7 @@ body.ov-open{overflow:hidden}
 .ask-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:440px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
 .ask-card h3{font-size:19px;margin:0}
 .ask-card p{margin:0 0 4px;font-size:13.5px;color:var(--ink-2)}
+.semo{margin-right:7px;font-size:.95em}
 </style>
 </head>
 <body>
@@ -949,7 +950,6 @@ function vWeek(){
   const sessions = sorted.length ? sorted.map(s => sessRow(w.id, s, log)).join("") :
     `<div class="empty"><strong>Pas encore de programme pour cette semaine.</strong> Demande à Claude de la remplir, ou note directement ce que tu as fait dans le journal ci-dessous.</div>`;
   const pills = TRACKS.map(([k,,short]) => { const p = phaseOf(w,k); return p ? `<span class="pill" style="--ph:${phVar(p)}">${short} · ${esc(phName(p))}</span>` : ""; }).join("");
-  const focus = plan.focus || (b && b.goal) || "";
   const mainS = plan.sessions.filter(s => !s.optional); const total = mainS.reduce((a,s) => a + (s.min || 0), 0); const free = mainS.some(s => !s.min);
   const fx = plan.sessions.some(s => s.nerv || s.doms);
   return `
@@ -966,7 +966,6 @@ function vWeek(){
       <button class="btn small ghost" data-action="ev-here" data-start="${ds(w.mon)}">+ Événement</button>
     </div>
     ${dl ? `<div class="dlbanner"><b>Semaine de décharge.</b> ${esc((b && b.deloadNote) || "Séries réduites de 40 à 50 %, mêmes charges. Aucun max, sauf la session de tests.")}</div>` : ""}
-    ${focus ? `<p style="margin:0;max-width:68ch">${esc(focus)}</p>` : ""}
   </section>
   ${S.ui.evform ? eventForm() : ""}
   <section style="display:flex;flex-direction:column;gap:10px">
@@ -999,6 +998,8 @@ function extrasPanel(log){
 
 /* ---------- séances : liste, fenêtre « Afficher », séance guidée ---------- */
 const fxIcons = s => (s.nerv ? `<span class="fx" title="Très exigeante pour le système nerveux">⚡<span class="sr">Très exigeante pour le système nerveux</span></span>` : "") + (s.doms ? `<span class="fx" title="Grosses courbatures probables">🔥<span class="sr">Grosses courbatures probables</span></span>` : "");
+const SESS_EMOJI = { "s-haut":"💪", "s-bas":"🦵", "s-pk1":"👟", "s-pk2":"👟", "s-endu":"🚴", "s-vo2":"🫁", "s-tests":"📏", "s-voyage":"🎒" };
+const sessEmoji = s => s.emoji || SESS_EMOJI[s.id] || ({ parkour:"👟", endurance:"🚴", intervalles:"🫁", test:"📏" })[s.kind] || (/haut/i.test(s.title || "") ? "💪" : /bas|jambe/i.test(s.title || "") ? "🦵" : "🏋️");
 const dayShort = d => { const x = pd(d); return DAYS[(x.getUTCDay() + 6) % 7].toLowerCase() + " " + x.getUTCDate(); };
 function sessRow(wk, s, log){
   const st = (log.sessions && log.sessions[s.id]) || {};
@@ -1008,7 +1009,7 @@ function sessRow(wk, s, log){
   return `<article class="srow ${st.done ? "done" : ""}">
     <div class="srow-t">
       <div class="row">${s.kind ? `<span class="tag">${esc(KINDS[s.kind] || s.kind)}</span>` : ""}${s.optional ? `<span class="tag opt">optionnelle</span>` : ""}${fxIcons(s)}${s.min || s.duration ? `<span class="muted" style="font-size:12.5px">${s.min ? "≈ " + fmtMin(s.min) : esc(s.duration)}</span>` : ""}</div>
-      <h3>${esc(s.title)}</h3>${status}
+      <h3><span class="semo" aria-hidden="true">${sessEmoji(s)}</span>${esc(s.title)}</h3>${status}
     </div>
     <div class="srow-b">
       <button class="btn" data-action="show" data-sid="${esc(s.id)}">Afficher</button>
@@ -1063,7 +1064,7 @@ function showSheet(wk, s, log){
   const foot = E ? `<div class="sh-foot two"><button class="btn" data-action="ed-cancel">Annuler</button><button class="btn primary big" data-action="ed-done">Enregistrer</button></div>`
     : runSteps(s).length ? `<div class="sh-foot"><button class="btn primary big" data-action="run" data-sid="${esc(s.id)}">Démarrer</button></div>` : "";
   return `<div class="ov" role="dialog" aria-modal="true" aria-labelledby="sh-title"><div class="scrim" data-action="${E ? "ed-cancel" : "ov-close"}"></div>
-    <div class="sheet"><div class="sh-head"><div>${E ? `<span class="eyebrow">Modifier · ${wkLabel(wk)}</span>` : `<div class="row">${fxIcons(s)}${s.min || s.duration ? `<span class="muted" style="font-size:12.5px">${s.min ? "≈ " + fmtMin(s.min) : esc(s.duration)}</span>` : ""}</div>`}<h2 id="sh-title">${esc(s.title)}</h2></div>
+    <div class="sheet"><div class="sh-head"><div>${E ? `<span class="eyebrow">Modifier · ${wkLabel(wk)}</span>` : `<div class="row">${fxIcons(s)}${s.min || s.duration ? `<span class="muted" style="font-size:12.5px">${s.min ? "≈ " + fmtMin(s.min) : esc(s.duration)}</span>` : ""}</div>`}<h2 id="sh-title"><span class="semo" aria-hidden="true">${sessEmoji(s)}</span>${esc(s.title)}</h2></div>
       <div class="row" style="flex-wrap:nowrap">${E ? "" : `<button class="btn small" data-action="ed-start" data-sid="${esc(s.id)}">Modifier</button>`}<button class="x" data-action="${E ? "ed-cancel" : "ov-close"}" aria-label="${E ? "Annuler les modifications" : "Fermer"}">✕</button></div></div>
       <div class="sh-body">${s.note && !E ? `<p class="sh-note">${esc(s.note)}</p>` : ""}${body}</div>${foot}${ask}</div></div>`;
 }
