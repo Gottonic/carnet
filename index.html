@@ -461,6 +461,62 @@ body.ov-open{overflow:hidden}
 .holdrun{display:flex;align-items:center;gap:12px}
 .hold-t{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums;color:var(--accent-ink)}
 .holdrun.done .hold-t{color:var(--mint-ink);font-size:28px}
+/* éditeur de programmes */
+.pe-body{gap:12px;padding-bottom:28px}
+.pe-body h3{font-size:17px;margin:0}
+.pe-h{margin-top:10px}
+.pe-help{margin:0;font-size:12.5px;color:var(--ink-3)}
+.pe-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pe-grid3{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:end}
+.pe-body .field label,.pe-body .lbl{font-size:12px;color:var(--ink-3);display:flex;flex-direction:column;gap:4px}
+.pe-body .ed-s{align-self:flex-start}
+.pe-chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.35;cursor:pointer}
+.pe-chk input{margin-top:2px;width:18px;height:18px;flex:0 0 auto}
+.pe-chk .muted{font-size:12.5px}
+.pe-flags{display:flex;flex-direction:column;gap:8px}
+.pe-slist{display:flex;flex-direction:column;gap:6px}
+.pe-srow{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.pe-st{flex:1;min-width:0;display:flex;flex-direction:column}
+.pe-st .muted{font-size:12px}
+.pe-act{display:flex;gap:4px;flex:0 0 auto}
+.pe-act button{all:unset;cursor:pointer;min-width:30px;height:30px;padding:0 6px;border-radius:9px;border:1px solid var(--line);background:var(--page);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.pe-act button.primary{background:var(--accent-pastel);border-color:var(--accent-pastel);color:var(--accent-ink);padding:0 10px}
+.pe-act button.danger{color:var(--bad);border-color:var(--bad)}
+.pe-act button[disabled]{opacity:.35;cursor:default}
+.pe-act button:focus-visible{outline:2px solid var(--accent)}
+.pe-danger{margin-top:14px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.pe-emo{display:flex;flex-wrap:wrap;gap:4px}
+.pe-emo button{all:unset;cursor:pointer;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;font-size:19px}
+.pe-emo button.on{background:var(--accent-pastel);border-color:var(--accent)}
+.pe-g{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px}
+.pe-gh{display:flex;gap:8px;align-items:center}
+.pe-gname{flex:1;min-width:0;font-weight:600}
+.pe-kind button{font-size:13.5px;padding:6px 12px}
+.pe-items{display:flex;flex-direction:column;gap:6px}
+.pe-x{all:unset;box-sizing:border-box;cursor:pointer;display:flex;gap:8px;align-items:center;width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:12px;background:var(--page)}
+.pe-x:focus-visible{outline:2px solid var(--accent)}
+.pe-x .chev{margin-left:auto}
+.pe-xt{display:flex;flex-direction:column;min-width:0;flex:1}
+.pe-xt .muted{font-size:12.5px;font-family:var(--f-mono)}
+.pe-x.open{cursor:default;flex-direction:column;align-items:stretch;gap:10px;background:var(--surface);border-color:var(--accent)}
+.pe-xh{display:flex;gap:8px;align-items:center}
+.pe-xh input{flex:1;min-width:0;font-weight:600}
+.x.sm{width:32px;height:32px;font-size:14px}
+.pe-xa{display:flex;flex-wrap:wrap;gap:6px}
+.pe-prog summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2)}
+.pe-prog[open] summary{margin-bottom:8px}
+.pe-prog .pe-help{margin-top:6px}
+.pe-link{display:flex;flex-direction:column;gap:6px;align-items:flex-start;background:var(--accent-soft);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13px;color:var(--ink-2)}
+.pend{display:flex;flex-direction:column;gap:8px;background:var(--sun-soft);border-radius:12px;padding:10px 12px}
+.pend p{margin:0}
+.pend-r{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px dashed var(--line)}
+.pe-chk small{display:block;font-size:12.5px;color:var(--ink-3);margin-top:1px}
+.month > .between{flex-wrap:nowrap;align-items:center}
+.month > .between .gcol{flex:1;min-width:0}
+.month > .between h3{min-width:0}
+.pend details summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
+.pe-body .field label input,.pe-body .field label select,.pe-body .field label textarea{color:var(--ink);font-size:15px;font-weight:400}
+.pe-body input::placeholder{color:var(--ink-3);opacity:.7}
 </style>
 </head>
 <body>
@@ -763,8 +819,17 @@ function setSync(force){
 /* ---------- programme publié par le coach (programme.json dans le dépôt) ---------- */
 async function fetchProgramme(){ try { const r = await fetch("programme.json?t=" + Date.now(), { cache:"no-store" }); if (!r.ok) return null; return await r.json(); } catch(e) { return null; } }
 function applyProgramme(p){
-  for (const [c, docs] of Object.entries(p.set || {})) if (COLS.includes(c)) for (const [id, doc] of Object.entries(docs)) put(c, id, doc);
-  for (const [c, ids] of Object.entries(p.del || {})) for (const id of ids) if (S.data[c] && S.data[c][id] !== undefined) del(c, id);
+  /* Un document modifié dans l'app (edited) n'est pas écrasé : la version de Claude attend dans Données. */
+  const pend = { ...((S.data.config.progPending || {}).docs || {}) }; const before = canon(pend);
+  for (const [c, docs] of Object.entries(p.set || {})) if (COLS.includes(c)) for (const [id, doc] of Object.entries(docs)) {
+    const cur = S.data[c][id]; const k = c + "/" + id;
+    if (cur && cur.edited) { pend[k] = doc; continue; }
+    put(c, id, doc); delete pend[k];
+  }
+  for (const [c, ids] of Object.entries(p.del || {})) for (const id of ids) if (S.data[c] && S.data[c][id] !== undefined) {
+    if (S.data[c][id].edited) { pend[c + "/" + id] = null; continue; } del(c, id);
+  }
+  if (canon(pend) !== before) put("config", "progPending", { docs: pend });
   put("config", "prog", { version:p.version, at:new Date().toISOString(), note:p.note || "" });
 }
 async function checkProgramme(force){
@@ -832,7 +897,7 @@ function scheduleRender(){ if (editing()) { pendingRender = true; return; } canc
 app.addEventListener("focusout", () => setTimeout(() => { if (pendingRender && !editing()) { pendingRender = false; render(); } }, 60));
 
 function setView(v, week){
-  S.view = v; if (week) S.week = week; S.confirm = null; if (S.ui.ov) { S.ui.ov = null; S.ui.edit = null; S.run = null; clearInterval(RUN.iv); RUN.iv = null; }
+  S.view = v; if (week) S.week = week; S.confirm = null; if (S.ui.ov) { S.ui.ov = null; S.ui.edit = null; S.pe = null; S.run = null; clearInterval(RUN.iv); RUN.iv = null; }
   try { history.replaceState(null, "", "#" + (v === "semaine" && S.week ? "s-" + S.week : v)); } catch(e) {}
   render(); window.scrollTo(0,0);
 }
@@ -846,7 +911,7 @@ function render(){
   if (!S.week) S.week = currentWeekId();
   const views = { calendrier: vCalendar, semaine: vWeek, suivi: vStats, nutrition: vNutrition, donnees: vData };
   app.innerHTML = (views[S.view] || vCalendar)() + ovHtml();
-  document.body.classList.toggle("ov-open", !!(S.ui.ov && S.view === "semaine"));
+  document.body.classList.toggle("ov-open", !!(S.ui.ov && (S.view === "semaine" || S.ui.ov.type === "pe")));
   drawCharts(); hydrateMedia();
 }
 
@@ -910,6 +975,7 @@ function vCalendar(){
     <div class="legend">${legend}</div>
   </section>
   ${sections}
+  <div class="row"><button class="btn" data-action="pe-new">+ Nouveau bloc</button></div>
   <section class="panel">
     <div class="between"><h3>À venir</h3><span class="muted">${upcoming.length} événement${upcoming.length>1?"s":""}</span></div>
     ${upcoming.length ? `<div class="evlist">${upcoming.map(evRow).join("")}</div>` : `<div class="muted">Rien de prévu. Ajoute tes compétitions et vacances avec « + Événement ».</div>`}
@@ -1097,7 +1163,7 @@ function showSheet(wk, s, log){
   return `<div class="ov" role="dialog" aria-modal="true" aria-labelledby="sh-title"><div class="scrim" data-action="${E ? "ed-cancel" : "ov-close"}"></div>
     <div class="sheet"><div class="sh-head"><div>${E ? `<span class="eyebrow">Modifier · ${wkLabel(wk)}</span>` : `<div class="row">${fxIcons(s)}${s.min || s.duration ? `<span class="muted" style="font-size:12.5px">${s.min ? "≈ " + fmtMin(s.min) : esc(s.duration)}</span>` : ""}</div>`}<h2 id="sh-title"><span class="semo" aria-hidden="true">${sessEmoji(s)}</span>${esc(s.title)}</h2></div>
       <div class="row" style="flex-wrap:nowrap">${E ? "" : `<button class="btn small" data-action="ed-start" data-sid="${esc(s.id)}">Modifier</button>`}<button class="x" data-action="${E ? "ed-cancel" : "ov-close"}" aria-label="${E ? "Annuler les modifications" : "Fermer"}">✕</button></div></div>
-      <div class="sh-body">${s.note && !E ? `<p class="sh-note">${esc(s.note)}</p>` : ""}${body}</div>${foot}${ask}</div></div>`;
+      <div class="sh-body">${s.note && !E ? `<p class="sh-note">${esc(s.note)}</p>` : ""}${E ? `<div class="pe-link"><span>Ajouter, retirer ou réorganiser des exercices, changer les supersets :</span><button class="btn small" data-action="pe-sess" data-sid="${esc(s.id)}">Modifier les exercices</button></div>` : ""}${body}</div>${foot}${ask}</div></div>`;
 }
 /* ---------- modifier une séance ---------- */
 const repsEditable = t => /^\s*\d+(\s*[–-]\s*\d+)?(\s*\/\s*jambe)?\s*$/.test(String(t || ""));
@@ -1166,6 +1232,328 @@ function edAction(a, b){
       if (future) E.ask = true; else { edSave("week"); return; } }
   }
   else if (a === "ed-save") { edSave(b.dataset.scope); return; }
+  render();
+}
+
+/* ---------- éditeur de programmes : blocs et séances ----------
+   S.pe = { mode:"block"|"sess", blockId, b:{…}, sessions:[…], sd:<séance en cours d'édition>, sIdx, src, openX, pick, confirm }
+   Tout se fait sur un brouillon ; rien n'est écrit avant « Enregistrer ». Les documents modifiés reçoivent edited:true :
+   les mises à jour du programme publiées par Claude ne les écrasent plus (voir applyProgramme). */
+const PE_EMOJIS = ["💪","🦵","👟","🚴","🫁","📏","🎒","🏋️","🤸","🧗","🧘","⚡"];
+const PE_KINDS = [["force","Force"],["hypertrophie","Hypertrophie"],["puissance","Puissance"],["parkour","Parkour"],["endurance","Endurance"],["intervalles","Intervalles"],["plyo","Plyo"],["mobilite","Mobilité"],["test","Tests"]];
+const PE_RESTS = [0,15,30,45,60,90,120,150,180,240];
+const PE_STEPS = [["","aucune"],["1","+1 kg"],["2.5","+2,5 kg"],["5","+5 kg"]];
+const slug = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "ex";
+const restTxt = n => n ? fmtSec(n) : "sans pause";
+function progEditBtn(b){ return `<button class="btn small" data-action="pe-block" data-id="${esc(b.id)}">Modifier</button>`; }
+function exLibrary(){
+  const lib = {}; const add = it => { if (!it || !it.name) return; const k = it.name.trim().toLowerCase(); if (!lib[k] || (!lib[k].img && it.img)) lib[k] = it; };
+  [...blocksSorted()].reverse().forEach(b => ((b.template && b.template.sessions) || []).forEach(s => (s.blocks || []).forEach(g => (g.items || []).forEach(add))));
+  Object.values(S.data.weeks || {}).forEach(w => (w.sessions || []).forEach(s => (s.blocks || []).forEach(g => (g.items || []).forEach(add))));
+  return lib;
+}
+function allSessionsLib(){
+  const out = []; const seen = new Set();
+  [...blocksSorted()].reverse().forEach(b => ((b.template && b.template.sessions) || []).forEach(s => { const k = s.title + "|" + b.id; if (!seen.has(k)) { seen.add(k); out.push({ s, from: b.name }); } }));
+  Object.entries(S.data.weeks || {}).forEach(([id, w]) => (w.sessions || []).forEach(s => { const k = s.title; if (!seen.has(k) && !out.some(x => x.s.title === s.title)) { seen.add(k); out.push({ s, from: wkLabel(id) }); } }));
+  return out;
+}
+/* brouillon d'une séance : groupes avec type et pauses explicites */
+function sessDraft(s){
+  const d = clone(s);
+  (d.blocks || []).forEach(g => {
+    const seq = restSeq(g); const n = (g.items || []).length;
+    g._kind = g.kind === "contraste" ? "contraste" : SS_KINDS[g.kind] ? "superset" : "simple";
+    g._between = g._kind === "superset" ? (seq[0] || 0) : 0; g._after = n ? (seq[n - 1] || 0) : 0;
+    if (g._kind === "contraste") g._after = Math.max(...seq, 0);
+  });
+  return d;
+}
+function sessClean(d){
+  const s = clone(d);
+  (s.blocks || []).forEach(g => {
+    const items = g.items || []; const n = items.length;
+    if (g._kind === "simple") { delete g.kind; delete g.rounds; delete g.restSeq; if (g._dirty) delete g.rule; }
+    else {
+      g.kind = g._kind; g.rounds = Math.max(1, ...items.map(x => typeof x.sets === "number" ? x.sets : 1));
+      if (g._dirty || !g.restSeq) {
+        g.restSeq = g._kind === "contraste" ? items.map((_, i) => i % 2 === 0 && i < n - 1 ? 0 : (g._after || 0)) : items.map((_, i) => i === n - 1 ? (g._after || 0) : (g._between || 0));
+        g.rule = g._kind === "contraste" ? `Par paires : lourd puis explosif enchaînés, ${restTxt(g._after)} après chaque paire.`
+          : `${restTxt(g._between)} entre les exercices, ${restTxt(g._after)} après le tour.`;
+      }
+    }
+    items.forEach(it => {
+      if (!it.id) it.id = uid("x"); if (!it.ex) it.ex = slug(it.name);
+      if (it.wave && !it.wave.length) delete it.wave; if (!it.step) delete it.step;
+      ["reps","load","rest","cue"].forEach(f => { if (it[f] === "" || it[f] == null) delete it[f]; });
+    });
+    Object.keys(g).filter(k => k.startsWith("_")).forEach(k => delete g[k]);
+  });
+  s.blocks = (s.blocks || []).filter(g => (g.items || []).length || g.name);
+  if (!s.id) s.id = uid("s");
+  s.emoji = s.emoji || undefined; if (!s.emoji) delete s.emoji;
+  return s;
+}
+/* ouvrir l'éditeur */
+function peOpenBlock(id){
+  const old = id ? S.data.blocks[id] : null; const bs = blocksSorted(); const last = bs[bs.length - 1];
+  const prev = old ? null : [...bs].reverse().find(x => x.template && (x.template.sessions || []).length);
+  const start = old ? old.start : last ? ds(addDays(pd(last.end), 1)) : ds(mondayOf(todayUTC()));
+  const nW = old ? blockWeeks({ start: old.start, end: old.end }).length : 6;
+  const w1 = weekById(isoWeekId(pd(start)));
+  const ref = old ? w1 : (last ? weekById(blockWeeks(last)[0]) : w1);
+  const ph = k => { const p = ref && phaseOf(ref, k); return p ? p.type : "force"; };
+  const src = old || prev;
+  S.pe = { mode: "block", blockId: id || null,
+    b: { name: old ? old.name : "Bloc " + (bs.length), start, weeks: nW, deload: old ? !!old.deload : true, tests: old ? old.tests !== false : true, goal: old ? old.goal || "" : "", bas: ph("bas"), haut: ph("haut") },
+    sessions: clone((src && src.template && src.template.sessions) || []), shift: true, sIdx: null, sd: null, openX: null, pick: null, confirm: null };
+  if (!old && src && S.pe.sessions.length) S.pe.copiedFrom = src.name;
+  ovOpen("pe", null); render(); const ov = app.querySelector(".ov.pe .run-body"); if (ov) ov.scrollTop = 0;
+}
+function peOpenSession(wk, sid){
+  const own = S.data.weeks[wk]; const w = weekById(wk); const b = w && blockOf(w);
+  let src = null, s = null;
+  if (own && (own.sessions || []).some(x => x.id === sid)) { src = { col: "weeks", id: wk }; s = own.sessions.find(x => x.id === sid); }
+  else if (sid === "s-tests" && S.data.content.tests) { src = { col: "content", id: "tests" }; s = S.data.content.tests.session; }
+  else if (b && b.template) { src = { col: "blocks", id: b.id }; s = (b.template.sessions || []).find(x => x.id === sid); }
+  if (!s) { toast("Cette séance ne peut pas être modifiée ici."); return; }
+  S.ui.edit = null;
+  S.pe = { mode: "sess", src, sd: sessDraft(s), sIdx: null, openX: null, pick: null, confirm: null, where: src.col === "blocks" ? "toutes les semaines de " + b.name : src.col === "weeks" ? "la semaine " + wkLabel(wk) : "toutes les sessions de tests" };
+  if (S.ui.ov) S.ui.ov = { type: "pe" }; else ovOpen("pe", null);
+  render();
+}
+/* ---------- rendu ---------- */
+function peView(){
+  const P = S.pe; if (!P) return "";
+  if (P.pick) return pePicker();
+  if (P.sd) return peSessView();
+  return peBlockView();
+}
+const peTop = (title, back) => `<div class="run-top"><button class="x" data-action="${back ? "pe-sback" : "pe-cancel"}" aria-label="${back ? "Retour au bloc" : "Annuler"}">${back ? "‹" : "✕"}</button><span class="run-sn">${esc(title)}</span></div>`;
+function peBlockView(){
+  const P = S.pe; const b = P.b; const end = addDays(pd(b.start), b.weeks * 7 - 1);
+  const starts = seasonWeeks().map(w => ds(w.mon)); if (!starts.includes(b.start)) starts.unshift(b.start);
+  const old = P.blockId ? S.data.blocks[P.blockId] : null; const after = blocksSorted().filter(x => x.id !== P.blockId && pd(x.start) > pd(old ? old.end : b.start));
+  const ptSel = k => `<select data-pe="b:${k}" id="pe-${k}">${Object.entries(PHASES).filter(([t]) => t !== "transition").map(([t, v]) => `<option value="${t}" ${b[k] === t ? "selected" : ""}>${v.label}</option>`).join("")}</select>`;
+  const list = P.sessions.map((s, i) => `<div class="pe-srow"><span class="semo">${sessEmoji(s)}</span><div class="pe-st"><b>${esc(s.title || "Sans titre")}</b><span class="muted">${[s.kind ? KINDS[s.kind] || s.kind : "", s.min ? "≈ " + fmtMin(s.min) : "", (s.blocks || []).reduce((a, g) => a + (g.items || []).length, 0) + " exercices", s.optional ? "optionnelle" : ""].filter(Boolean).join(" · ")}</span></div>
+      <div class="pe-act"><button data-action="pe-smove" data-i="${i}" data-d="-1" aria-label="Monter" ${i ? "" : "disabled"}>↑</button><button data-action="pe-smove" data-i="${i}" data-d="1" aria-label="Descendre" ${i < P.sessions.length - 1 ? "" : "disabled"}>↓</button><button class="primary" data-action="pe-sedit" data-i="${i}">Modifier</button></div></div>`).join("");
+  const conf = P.confirm === "del-block";
+  return `<div class="ov run pe" role="dialog" aria-modal="true" aria-label="${P.blockId ? "Modifier le bloc" : "Nouveau bloc"}">${peTop(P.blockId ? "Modifier le bloc" : "Nouveau bloc")}
+    <div class="run-body pe-body">
+      ${P.copiedFrom ? `<p class="pe-help">Séances copiées de ${esc(P.copiedFrom)} : ajuste-les ou retire celles qui ne servent plus.</p>` : ""}
+      <div class="field"><label for="pe-name">Nom</label><input id="pe-name" type="text" data-pe="b:name" value="${esc(b.name)}"></div>
+      <div class="pe-grid">
+        <div class="field"><label for="pe-start">Début</label><select id="pe-start" data-pe="b:start">${starts.map(d => `<option value="${d}" ${d === b.start ? "selected" : ""}>${wkLabel(isoWeekId(pd(d)))} · ${fmtD(pd(d))}</option>`).join("")}</select></div>
+        <div class="field"><span class="lbl">Durée</span><div class="ed-s"><button data-action="pe-weeks" data-d="-1" aria-label="Une semaine de moins">−</button><b>${b.weeks} sem.</b><button data-action="pe-weeks" data-d="1" aria-label="Une semaine de plus">+</button></div></div>
+      </div>
+      <p class="pe-help">${wkLabel(isoWeekId(pd(b.start)))} → ${wkLabel(isoWeekId(mondayOf(end)))}, jusqu'au ${fmtLong(ds(end))}.</p>
+      <div class="pe-grid">
+        <div class="field"><label for="pe-bas">Bas du corps</label>${ptSel("bas")}</div>
+        <div class="field"><label for="pe-haut">Haut du corps</label>${ptSel("haut")}</div>
+      </div>
+      <label class="pe-chk"><input type="checkbox" data-pe="b:deload" ${b.deload ? "checked" : ""}><span>Dernière semaine en décharge<small>Mêmes charges, environ 45 % de séries en moins.</small></span></label>
+      <label class="pe-chk"><input type="checkbox" data-pe="b:tests" ${b.tests ? "checked" : ""}><span>Tests à la fin du bloc<small>Ajoutés en première séance du bloc suivant.</small></span></label>
+      ${after.length ? `<label class="pe-chk"><input type="checkbox" data-pe="P:shift" ${P.shift ? "checked" : ""}><span>Décaler les blocs suivants si la fin change<small>${after.map(x => esc(x.name)).join(", ")}</small></span></label>` : ""}
+      <div class="field"><label for="pe-goal">Objectif</label><textarea id="pe-goal" data-pe="b:goal" rows="3">${esc(b.goal)}</textarea></div>
+      <div class="between pe-h"><h3>Séances du bloc</h3><button class="btn small" data-action="pe-sadd">+ Ajouter</button></div>
+      <p class="pe-help">Elles se répètent chaque semaine du bloc. Les tests s'ajoutent tout seuls.</p>
+      <div class="pe-slist">${list || `<div class="muted">Aucune séance.</div>`}</div>
+      ${P.blockId ? `<div class="pe-danger"><button class="btn small ${conf ? "danger" : "ghost"}" data-action="pe-bdel">${conf ? "Confirmer : supprimer ce bloc" : "Supprimer ce bloc"}</button>${conf ? `<span class="muted">${after.length && P.shift ? "Les blocs suivants seront rapprochés." : ""}</span>` : ""}</div>` : ""}
+    </div>
+    <div class="run-foot"><button class="btn" data-action="pe-cancel">Annuler</button><button class="btn primary big" data-action="pe-bsave">Enregistrer</button></div></div>`;
+}
+function peSessView(){
+  const P = S.pe; const s = P.sd; const inBlock = P.mode === "block";
+  const groups = (s.blocks || []).map((g, gi) => {
+    const kinds = [["simple","Simple"],["superset","Superset"],["contraste","Contraste"]];
+    const rs = (f, v) => `<select data-pe="g:${f}" data-g="${gi}">${PE_RESTS.map(n => `<option value="${n}" ${n === (v || 0) ? "selected" : ""}>${restTxt(n)}</option>`).join("")}</select>`;
+    const help = g._kind === "superset" ? "Les exercices alternent : A1, A2, A1, A2…" : g._kind === "contraste" ? "Par paires : le lourd puis l'explosif enchaînés (A1 → A2), pause, puis A3 → A4…" : "Toutes les séries d'un exercice, puis le suivant.";
+    const items = (g.items || []).map((it, xi) => peItem(g, gi, it, xi)).join("");
+    const conf = P.confirm === "g:" + gi;
+    return `<div class="pe-g">
+      <div class="pe-gh"><input type="text" class="pe-gname" data-pe="g:name" data-g="${gi}" value="${esc(g.name || "")}" placeholder="Groupe ${gi + 1}" aria-label="Nom du groupe">
+        <div class="pe-act"><button data-action="pe-gmove" data-g="${gi}" data-d="-1" aria-label="Monter le groupe" ${gi ? "" : "disabled"}>↑</button><button data-action="pe-gmove" data-g="${gi}" data-d="1" aria-label="Descendre le groupe" ${gi < s.blocks.length - 1 ? "" : "disabled"}>↓</button><button class="${conf ? "danger" : ""}" data-action="pe-gdel" data-g="${gi}" aria-label="Supprimer le groupe">${conf ? "Supprimer ?" : "🗑"}</button></div></div>
+      <div class="seg pe-kind" role="group" aria-label="Type de groupe">${kinds.map(([k, l]) => `<button class="${g._kind === k ? "on" : ""}" aria-pressed="${g._kind === k}" data-action="pe-gkind" data-g="${gi}" data-k="${k}">${l}</button>`).join("")}</div>
+      <p class="pe-help">${help}</p>
+      ${g._kind === "superset" ? `<div class="pe-grid"><div class="field"><span class="lbl">Pause entre les exercices</span>${rs("_between", g._between)}</div><div class="field"><span class="lbl">Pause après le tour</span>${rs("_after", g._after)}</div></div>` : ""}
+      ${g._kind === "contraste" ? `<div class="pe-grid"><div class="field"><span class="lbl">Pause après chaque paire</span>${rs("_after", g._after)}</div></div>` : ""}
+      <div class="pe-items">${items}</div>
+      <button class="btn small" data-action="pe-xadd" data-g="${gi}">+ Exercice</button>
+    </div>`;
+  }).join("");
+  const conf = P.confirm === "del-sess";
+  return `<div class="ov run pe" role="dialog" aria-modal="true" aria-label="Modifier la séance">${peTop(inBlock ? "Séance · " + (P.b.name || "") : "Modifier la séance", inBlock)}
+    <div class="run-body pe-body">
+      ${!inBlock ? `<p class="pe-help">Ces changements valent pour ${esc(P.where)}.</p>` : ""}
+      <div class="field"><label for="pe-stitle">Titre</label><input id="pe-stitle" type="text" data-pe="s:title" value="${esc(s.title || "")}"></div>
+      <div class="pe-grid">
+        <div class="field"><label for="pe-skind">Type</label><select id="pe-skind" data-pe="s:kind">${PE_KINDS.map(([k, l]) => `<option value="${k}" ${s.kind === k ? "selected" : ""}>${l}</option>`).join("")}${s.kind && !PE_KINDS.some(([k]) => k === s.kind) ? `<option value="${esc(s.kind)}" selected>${esc(KINDS[s.kind] || s.kind)}</option>` : ""}</select></div>
+        <div class="field"><span class="lbl">Durée</span><div class="ed-s"><button data-action="pe-smin" data-d="-5" aria-label="5 minutes de moins">−</button><b>${s.min ? fmtMin(s.min) : "libre"}</b><button data-action="pe-smin" data-d="5" aria-label="5 minutes de plus">+</button></div></div>
+      </div>
+      <div class="field"><span class="lbl">Émoji</span><div class="pe-emo">${PE_EMOJIS.map(e => `<button class="${sessEmoji(s) === e ? "on" : ""}" data-action="pe-emoji" data-v="${e}" aria-label="Émoji ${e}">${e}</button>`).join("")}</div></div>
+      <div class="pe-flags">
+        <label class="pe-chk"><input type="checkbox" data-pe="s:nerv" ${s.nerv ? "checked" : ""}><span>⚡ Exigeante pour le système nerveux</span></label>
+        <label class="pe-chk"><input type="checkbox" data-pe="s:doms" ${s.doms ? "checked" : ""}><span>🔥 Grosses courbatures</span></label>
+        <label class="pe-chk"><input type="checkbox" data-pe="s:optional" ${s.optional ? "checked" : ""}><span>Optionnelle<small>Ne compte pas dans le suivi.</small></span></label>
+      </div>
+      <div class="field"><label for="pe-snote">Note</label><input id="pe-snote" type="text" data-pe="s:note" value="${esc(s.note || "")}"></div>
+      <div class="between pe-h"><h3>Exercices</h3></div>
+      ${groups || `<div class="muted">Aucun exercice pour l'instant.</div>`}
+      <button class="btn" data-action="pe-gadd">+ Nouveau groupe</button>
+      ${inBlock ? `<div class="pe-danger"><button class="btn small ${conf ? "danger" : "ghost"}" data-action="pe-sdel">${conf ? "Confirmer : retirer cette séance du bloc" : "Retirer cette séance du bloc"}</button></div>` : ""}
+    </div>
+    <div class="run-foot"><button class="btn" data-action="${inBlock ? "pe-sback" : "pe-cancel"}">Annuler</button><button class="btn primary big" data-action="pe-ssave">${inBlock ? "OK" : "Enregistrer"}</button></div>
+    <datalist id="pe-lib">${Object.values(exLibrary()).map(it => `<option value="${esc(it.name)}"></option>`).join("")}</datalist></div>`;
+}
+function peItem(g, gi, it, xi){
+  const P = S.pe; const k = gi + ":" + xi; const open = P.openX === k; const grp = g._kind !== "simple";
+  const code = grp ? String.fromCharCode(65 + gi) + (xi + 1) : "";
+  const sum = [[typeof it.sets === "number" ? it.sets + " × " + (it.reps || "?") : it.reps || "", it.load ? "@ " + it.load : ""].filter(Boolean).join(" "), !grp && it.rest ? "repos " + it.rest : ""].filter(Boolean).join(" · ");
+  const conf = P.confirm === "x:" + k;
+  if (!open) return `<button class="pe-x" data-action="pe-xopen" data-k="${k}">${code ? `<span class="code">${code}</span>` : ""}<span class="pe-xt"><b>${esc(it.name || "Nouvel exercice")}</b><span class="muted">${esc(sum) || "à compléter"}${it.step ? " · +" + fmtNum(it.step, 1) + " kg/sem." : ""}${it.wave ? " · reps " + esc(it.wave.join("-")) : ""}</span></span><span class="chev" aria-hidden="true"></span></button>`;
+  const restOpts = ["", "30 s", "45 s", "60 s", "90 s", "2 min", "3 min"]; if (it.rest && !restOpts.includes(it.rest)) restOpts.push(it.rest);
+  return `<div class="pe-x open">
+    <div class="pe-xh">${code ? `<span class="code">${code}</span>` : ""}<input type="text" list="pe-lib" data-pe="x:name" data-g="${gi}" data-x="${xi}" value="${esc(it.name || "")}" placeholder="Nom de l'exercice" aria-label="Nom de l'exercice"><button class="x sm" data-action="pe-xopen" data-k="${k}" aria-label="Replier">⌃</button></div>
+    <div class="pe-grid3">
+      <div class="field"><span class="lbl">Séries</span><div class="ed-s"><button data-action="pe-xsets" data-g="${gi}" data-x="${xi}" data-d="-1" aria-label="Une série de moins">−</button><b>${typeof it.sets === "number" ? it.sets : "–"}</b><button data-action="pe-xsets" data-g="${gi}" data-x="${xi}" data-d="1" aria-label="Une série de plus">+</button></div></div>
+      <div class="field"><label>Reps<input type="text" data-pe="x:reps" data-g="${gi}" data-x="${xi}" value="${esc(it.reps || "")}" placeholder="5, 8–10, 40 s…"></label></div>
+    </div>
+    <div class="field"><label>Charge<input type="text" data-pe="x:load" data-g="${gi}" data-x="${xi}" value="${esc(it.load || "")}" placeholder="ex. 72 kg, +16 kg, 10 kg / main, poids de corps"></label></div>
+    ${grp ? "" : `<div class="field"><label>Pause entre les séries<select data-pe="x:rest" data-g="${gi}" data-x="${xi}">${restOpts.map(r => `<option value="${esc(r)}" ${(it.rest || "") === r ? "selected" : ""}>${r || "par défaut (1 min)"}</option>`).join("")}</select></label></div>`}
+    <div class="field"><label>Consigne<input type="text" data-pe="x:cue" data-g="${gi}" data-x="${xi}" value="${esc(it.cue || "")}" placeholder="ex. 2 reps en réserve"></label></div>
+    <details class="pe-prog" ${it.step || it.wave ? "open" : ""}><summary>Progression</summary>
+      <div class="pe-grid">
+        <div class="field"><label>Charge chaque semaine<select data-pe="x:step" data-g="${gi}" data-x="${xi}">${PE_STEPS.map(([v, l]) => `<option value="${v}" ${String(it.step || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
+        <div class="field"><label>Reps semaine par semaine<input type="text" data-pe="x:wave" data-g="${gi}" data-x="${xi}" value="${esc((it.wave || []).join(", "))}" placeholder="ex. 5, 5, 4, 4, 3"></label></div>
+      </div>
+      <p class="pe-help">La charge monte seulement si les reps prévues ont été faites. Les reps par semaine remplacent les reps ci-dessus, semaine 1, 2, 3…</p>
+    </details>
+    <div class="pe-xa"><button class="btn small" data-action="pe-xmove" data-g="${gi}" data-x="${xi}" data-d="-1" ${xi ? "" : "disabled"}>↑ Monter</button><button class="btn small" data-action="pe-xmove" data-g="${gi}" data-x="${xi}" data-d="1" ${xi < g.items.length - 1 ? "" : "disabled"}>↓ Descendre</button><button class="btn small ${conf ? "danger" : "ghost"}" data-action="pe-xdel" data-g="${gi}" data-x="${xi}">${conf ? "Confirmer" : "Supprimer"}</button></div>
+  </div>`;
+}
+function pePicker(){
+  const lib = allSessionsLib();
+  return `<div class="ov run pe" role="dialog" aria-modal="true" aria-label="Ajouter une séance">${`<div class="run-top"><button class="x" data-action="pe-pickx" aria-label="Retour">‹</button><span class="run-sn">Ajouter une séance</span></div>`}
+    <div class="run-body pe-body">
+      <button class="pe-x" data-action="pe-pick" data-i="-1"><span class="semo">＋</span><span class="pe-xt"><b>Séance vide</b><span class="muted">à construire de zéro</span></span></button>
+      <h3 class="pe-h">Copier une séance existante</h3>
+      ${lib.map((x, i) => `<button class="pe-x" data-action="pe-pick" data-i="${i}"><span class="semo">${sessEmoji(x.s)}</span><span class="pe-xt"><b>${esc(x.s.title)}</b><span class="muted">${esc(x.from)}${x.s.min ? " · ≈ " + fmtMin(x.s.min) : ""}</span></span></button>`).join("")}
+    </div></div>`;
+}
+/* ---------- enregistrement ---------- */
+const dayN = d => Math.round(pd(d) / 86400000);
+function shiftAfter(afterDate, delta, exceptId){
+  if (!delta) return;
+  const blocks = blocksSorted(); const lastEnd = blocks.length ? blocks[blocks.length - 1].end : afterDate;
+  blocks.filter(x => x.id !== exceptId && x.start > afterDate).forEach(x => {
+    const nb = { ...S.data.blocks[x.id], start: ds(addDays(pd(x.start), delta)), end: ds(addDays(pd(x.end), delta)), edited: true };
+    if (x.deload) nb.deload = isoWeekId(mondayOf(pd(nb.end)));
+    put("blocks", x.id, nb);
+  });
+  Object.entries(S.data.phases).forEach(([pid, p]) => {
+    if (!p.start || p.start <= afterDate) return;
+    const np = { ...p, start: ds(addDays(pd(p.start), delta)), edited: true };
+    if (p.end <= lastEnd) np.end = ds(addDays(pd(p.end), delta));
+    if (np.start > np.end) del("phases", pid); else put("phases", pid, np);
+  });
+}
+function setBlockPhases(id, start, end, types, oldRange){
+  TRACKS.forEach(([k]) => {
+    const mine = "ph-" + id + "-" + k;
+    Object.entries(S.data.phases).forEach(([pid, p]) => {
+      if (pid === mine || (p.track || "bas") !== k || !p.start || !p.end) return;
+      if (oldRange && p.start >= oldRange[0] && p.end <= oldRange[1]) { del("phases", pid); return; }
+      if (p.end < start || p.start > end) return;
+      if (p.start >= start && p.end <= end) { del("phases", pid); return; }
+      const np = { ...p, edited: true };
+      if (p.start < start) np.end = ds(addDays(pd(start), -1)); else np.start = ds(addDays(pd(end), 1));
+      if (np.start > np.end) del("phases", pid); else put("phases", pid, np);
+    });
+    put("phases", mine, { track: k, type: types[k], name: (PHASES[types[k]] || {}).label || types[k], start, end, edited: true });
+  });
+}
+function peSaveBlock(){
+  const P = S.pe; const b = P.b; const id = P.blockId || uid("bl"); const old = P.blockId ? S.data.blocks[P.blockId] : null;
+  const start = b.start; const end = ds(addDays(pd(start), b.weeks * 7 - 1));
+  if (!b.name.trim()) { toast("Donne un nom au bloc."); return; }
+  const clash = blocksSorted().find(x => x.id !== id && !(x.end < start || x.start > end) && !(P.shift && old && x.start > old.end));
+  if (clash) { toast("Ce bloc chevauche " + clash.name + ". Change le début ou la durée."); return; }
+  if (old && P.shift && old.end !== end) shiftAfter(old.end, dayN(end) - dayN(old.end), id);
+  const doc = { ...(old || {}), name: b.name.trim(), start, end, goal: b.goal.trim(), tests: !!b.tests, edited: true,
+    template: { ...((old && old.template) || {}), sessions: P.sessions.map(s => s) } };
+  if (b.deload) doc.deload = isoWeekId(mondayOf(pd(end))); else delete doc.deload;
+  put("blocks", id, doc);
+  setBlockPhases(id, start, end, { bas: b.bas, haut: b.haut }, old ? [old.start, old.end] : null);
+  toast(old ? "Bloc enregistré" : "Bloc ajouté"); peClose();
+}
+function peDeleteBlock(){
+  const P = S.pe; const old = S.data.blocks[P.blockId]; if (!old) return;
+  del("blocks", P.blockId);
+  Object.entries(S.data.phases).forEach(([pid, p]) => { if (p.start >= old.start && p.end <= old.end) del("phases", pid); });
+  if (P.shift) shiftAfter(old.end, -(dayN(old.end) - dayN(old.start) + 1), P.blockId);
+  toast("Bloc supprimé"); peClose();
+}
+function peSaveSession(){
+  const P = S.pe; const s = sessClean(P.sd);
+  if (!s.title || !s.title.trim()) { toast("Donne un titre à la séance."); return; }
+  if (P.mode === "block") { if (P.sIdx == null || P.sIdx < 0) P.sessions.push(s); else P.sessions[P.sIdx] = s; P.sd = null; P.sIdx = null; P.openX = null; P.confirm = null; render(); return; }
+  const { col, id } = P.src; const doc = clone(S.data[col][id]);
+  if (col === "content") doc.session = s;
+  else if (col === "weeks") doc.sessions = (doc.sessions || []).map(x => x.id === s.id ? s : x);
+  else { doc.template = doc.template || {}; doc.template.sessions = (doc.template.sessions || []).map(x => x.id === s.id ? s : x); }
+  doc.edited = true; put(col, id, doc); toast("Séance enregistrée"); peClose();
+}
+function peClose(){ S.pe = null; if (S.ui.ov && S.ui.ov.type === "pe") ovClose(); else render(); }
+/* ---------- actions ---------- */
+function peField(el, isChange){
+  const P = S.pe; if (!P || !el.dataset.pe) return; const [scope, f] = el.dataset.pe.split(":");
+  const v = el.type === "checkbox" ? el.checked : el.value;
+  if (scope === "b") { P.b[f] = v; if (f === "start" || f === "bas" || f === "haut") render(); return; }
+  if (scope === "P") { P[f] = v; return; }
+  const s = P.sd; if (!s) return;
+  if (scope === "s") { s[f] = v; if (f === "kind") { delete s.emoji; render(); } return; }
+  const g = s.blocks[+el.dataset.g]; if (!g) return;
+  if (scope === "g") { g[f] = f.startsWith("_") ? +v : v; g._dirty = true; return; }
+  const it = g.items[+el.dataset.x]; if (!it) return;
+  if (f === "wave") { const w = v.split(/[,;]\s*/).map(x => x.trim()).filter(Boolean); if (w.length) it.wave = w; else delete it.wave; }
+  else if (f === "step") { if (v) it.step = +v; else delete it.step; }
+  else it[f] = v;
+  if (f === "name" && el.type === "text" && isChange) { const lib = exLibrary()[v.trim().toLowerCase()]; if (lib) { ["img","cue","link","ex","inc"].forEach(k => { if (lib[k] != null && it[k] == null) it[k] = lib[k]; }); if (!it.load && lib.load) it.load = lib.load; if (!it.reps && lib.reps) it.reps = lib.reps; render(); } }
+}
+function peAction(a, b){
+  const P = S.pe;
+  if (a === "pe-block") { peOpenBlock(b.dataset.id); return; }
+  if (a === "pe-new") { peOpenBlock(null); return; }
+  if (a === "pe-sess") { peOpenSession(S.week, b.dataset.sid); return; }
+  if (!P) return;
+  const s = P.sd; const g = s && b.dataset.g != null ? s.blocks[+b.dataset.g] : null; const xi = b.dataset.x != null ? +b.dataset.x : null;
+  if (a !== "pe-bdel" && a !== "pe-gdel" && a !== "pe-xdel" && a !== "pe-sdel") P.confirm = null;
+  switch (a) {
+    case "pe-cancel": peClose(); return;
+    case "pe-weeks": P.b.weeks = Math.max(1, Math.min(12, P.b.weeks + +b.dataset.d)); break;
+    case "pe-bsave": peSaveBlock(); return;
+    case "pe-bdel": if (P.confirm !== "del-block") P.confirm = "del-block"; else { peDeleteBlock(); return; } break;
+    case "pe-smove": { const i = +b.dataset.i, j = i + +b.dataset.d; if (j >= 0 && j < P.sessions.length) [P.sessions[i], P.sessions[j]] = [P.sessions[j], P.sessions[i]]; break; }
+    case "pe-sedit": P.sIdx = +b.dataset.i; P.sd = sessDraft(P.sessions[P.sIdx]); P.openX = null; break;
+    case "pe-sadd": P.pick = true; break;
+    case "pe-pickx": P.pick = null; break;
+    case "pe-pick": { const i = +b.dataset.i; const lib = allSessionsLib(); const src = i >= 0 ? clone(lib[i].s) : { title: "", kind: "force", min: 45, blocks: [{ name: "", items: [] }] };
+      src.id = uid("s"); P.pick = null; P.sIdx = -1; P.sd = sessDraft(src); P.openX = null; break; }
+    case "pe-sback": P.sd = null; P.sIdx = null; P.openX = null; break;
+    case "pe-ssave": peSaveSession(); return;
+    case "pe-sdel": if (P.confirm !== "del-sess") P.confirm = "del-sess"; else { if (P.sIdx >= 0) P.sessions.splice(P.sIdx, 1); P.sd = null; P.sIdx = null; P.confirm = null; } break;
+    case "pe-smin": s.min = Math.max(0, (s.min || 0) + +b.dataset.d) || undefined; if (!s.min) delete s.min; break;
+    case "pe-emoji": s.emoji = b.dataset.v; break;
+    case "pe-gadd": s.blocks.push({ name: "", items: [], _kind: "simple", _between: 0, _after: 90, _dirty: true }); break;
+    case "pe-gmove": { const i = +b.dataset.g, j = i + +b.dataset.d; if (j >= 0 && j < s.blocks.length) [s.blocks[i], s.blocks[j]] = [s.blocks[j], s.blocks[i]]; P.openX = null; break; }
+    case "pe-gdel": { const k = "g:" + b.dataset.g; if (P.confirm !== k) P.confirm = k; else { s.blocks.splice(+b.dataset.g, 1); P.confirm = null; P.openX = null; } break; }
+    case "pe-gkind": g._kind = b.dataset.k; g._dirty = true; if (g._kind !== "simple" && !g._after) g._after = 90; if (g._kind === "superset" && g._between == null) g._between = 0; break;
+    case "pe-xadd": g.items.push({ id: uid("x"), name: "", sets: 3, reps: "" }); P.openX = b.dataset.g + ":" + (g.items.length - 1); g._dirty = true; break;
+    case "pe-xopen": P.openX = P.openX === b.dataset.k ? null : b.dataset.k; break;
+    case "pe-xsets": { const it = g.items[xi]; it.sets = Math.max(1, Math.min(12, (typeof it.sets === "number" ? it.sets : 1) + +b.dataset.d)); break; }
+    case "pe-xmove": { const j = xi + +b.dataset.d; if (j >= 0 && j < g.items.length) { [g.items[xi], g.items[j]] = [g.items[j], g.items[xi]]; P.openX = b.dataset.g + ":" + j; g._dirty = true; } break; }
+    case "pe-xdel": { const k = "x:" + b.dataset.g + ":" + xi; if (P.confirm !== k) P.confirm = k; else { g.items.splice(xi, 1); P.confirm = null; P.openX = null; g._dirty = true; } break; }
+  }
   render();
 }
 
@@ -1297,7 +1685,7 @@ function runView(){
   return `<div class="ov run" role="dialog" aria-modal="true" aria-label="Séance : ${esc(s.title)}">${top}${body}<div class="run-foot">${foot}</div></div>`;
 }
 function ovHtml(){
-  const o = S.ui.ov; if (!o || S.view !== "semaine") return "";
+  const o = S.ui.ov; if (!o) return ""; if (o.type === "pe") return peView(); if (S.view !== "semaine") return "";
   if (o.type === "run") return runView();
   const s = planOf(S.week).sessions.find(x => x.id === o.sid); return s ? showSheet(S.week, s, S.data.logs[S.week] || {}) : "";
 }
@@ -1307,7 +1695,7 @@ function ovOpen(type, sid){
 }
 function ovClose(fromPop){
   const wasRun = S.ui.ov && S.ui.ov.type === "run";
-  S.ui.ov = null; S.ui.edit = null; S.run = null; clearInterval(RUN.iv); RUN.iv = null;
+  S.ui.ov = null; S.ui.edit = null; S.pe = null; S.run = null; clearInterval(RUN.iv); RUN.iv = null;
   if (wasRun) { try { RUN.lock && RUN.lock.release(); } catch(e) {} RUN.lock = null; }
   if (!fromPop) { try { if (history.state && history.state.ov) history.back(); } catch(e) {} }
   render();
@@ -1625,6 +2013,7 @@ function vData(){
   <section class="panel">
     <h3>Programme</h3>
     <p style="margin:0;max-width:68ch;color:var(--ink-2)">Version installée : ${prog.version ? prog.version + (prog.at ? " (" + fmtLong(prog.at.slice(0,10)) + ")" : "") : "aucune"}. Les nouvelles semaines et ajustements préparés par Claude s'installent tout seuls à l'ouverture de l'app.</p>
+    ${pendingPanel()}
     <div class="row"><button class="btn" data-action="prog-check">Vérifier les mises à jour</button></div>
   </section>
   <section class="panel">
@@ -1657,6 +2046,16 @@ function vData(){
     <p style="margin:0;color:var(--ink-2)">Connecté : ${esc(EMAIL || "?")}</p>
     <div class="row"><button class="btn ${S.confirm === "logout" ? "danger" : ""}" data-action="logout">${S.confirm === "logout" ? "Confirmer la déconnexion" : "Se déconnecter"}</button></div>
   </section>`;
+}
+function pendingPanel(){
+  const docs = Object.entries((S.data.config.progPending || {}).docs || {}); if (!docs.length) return "";
+  const lab = (k, d) => { const [c, id] = k.split("/"); const cur = S.data[c] && S.data[c][id];
+    return c === "blocks" ? "Bloc : " + ((cur && cur.name) || (d && d.name) || id) : c === "phases" ? "Phase " + ((cur || d || {}).track === "haut" ? "haut" : "bas") + " : " + ((cur && cur.name) || (d && d.name) || id) : c === "weeks" ? "Semaine " + wkLabel(id) : c === "events" ? "Événement : " + ((cur && cur.title) || id) : c + " : " + id; };
+  const nb = docs.filter(([k]) => k.startsWith("blocks/")).length;
+  return `<div class="pend"><p><b>Une mise à jour de Claude n'a pas été installée partout</b>, parce que tu as modifié toi-même ${nb ? nb + " bloc" + (nb > 1 ? "s" : "") : "certains éléments"} (${docs.length} élément${docs.length > 1 ? "s" : ""} en tout).</p>
+    <div class="row"><button class="btn small" data-action="pend-take" data-k="*">Prendre la version de Claude</button><button class="btn small ghost" data-action="pend-keep" data-k="*">Garder la mienne</button></div>
+    <details><summary>Choisir élément par élément</summary>${docs.map(([k, d]) => `<div class="pend-r"><span>${esc(lab(k, d))}${d == null ? " <span class=\"muted\">(Claude l'a retiré)</span>" : ""}</span>
+    <span class="row"><button class="btn small" data-action="pend-take" data-k="${esc(k)}">Version de Claude</button><button class="btn small ghost" data-action="pend-keep" data-k="${esc(k)}">Garder la mienne</button></span></div>`).join("")}</details></div>`;
 }
 function exportObj(){ return { app:"carnet-parkour", version:1, exportedAt:new Date().toISOString(), data:S.data }; }
 function offerFile(filename, text){
@@ -1721,6 +2120,10 @@ app.addEventListener("click", async e => {
   else if (a === "ov-close") { ovClose(); }
   else if (a.startsWith("run-")) { runAction(a, b); }
   else if (a.startsWith("ed")) { edAction(a, b); }
+  else if (a.startsWith("pe-")) { peAction(a, b); }
+  else if (a === "pend-take" || a === "pend-keep") { const docs = { ...((S.data.config.progPending || {}).docs || {}) }; const keys = b.dataset.k === "*" ? Object.keys(docs) : [b.dataset.k];
+    keys.forEach(k => { const [c, id] = k.split("/"); if (a === "pend-take") { if (docs[k] == null) { if (S.data[c] && S.data[c][id] !== undefined) del(c, id); } else put(c, id, docs[k]); } delete docs[k]; });
+    put("config", "progPending", { docs }); toast(a === "pend-take" ? "Version de Claude installée" : "Ta version est gardée"); }
   else if (a === "del-ev" || a === "del-phase" || a === "del-test" || a === "del-block") {
     const key = {"del-ev":"ev:","del-phase":"ph:","del-test":"test:","del-block":"bl:"}[a] + b.dataset.id;
     if (S.confirm !== key) { S.confirm = key; render(); return; }
@@ -1794,6 +2197,7 @@ function onField(el){
 }
 app.addEventListener("change", async e => {
   const el = e.target;
+  if (el.dataset && el.dataset.pe) { peField(el, true); if (el.matches("select, input[type=checkbox]")) render(); return; }
   if (el.id === "photo-in") return addPhotos(el.files);
   if (el.id === "media-in") { const f = el.files[0]; if (f) importMediaZip(f); return; }
   if (el.id === "import-in") { const f = el.files[0]; if (!f) return; try { const j = JSON.parse(await f.text()); if (!j || !j.data) throw 0; S.ui.importData = j; S.ui.importName = f.name; } catch(err){ toast("Ce fichier n'est pas un export du carnet."); } render(); return; }
@@ -1804,7 +2208,8 @@ app.addEventListener("change", async e => {
   clearTimeout(debounce[el.id]); onField(el);
 });
 app.addEventListener("input", e => {
-  const el = e.target; if (!el.matches("textarea[data-log], input[data-log], input[data-actual], input[data-photo-cap], input[data-ci], input[data-ctx], input[data-snote], input[data-tfield]")) return;
+  const el = e.target;
+  if (el.dataset && el.dataset.pe) { if (el.matches("input[type=text], textarea")) peField(el, false); return; } if (!el.matches("textarea[data-log], input[data-log], input[data-actual], input[data-photo-cap], input[data-ci], input[data-ctx], input[data-snote], input[data-tfield]")) return;
   clearTimeout(debounce[el.id]); debounce[el.id] = setTimeout(() => onField(el), 1500);
 });
 app.addEventListener("toggle", e => { if (e.target && e.target.id === "exdet") { S.ui.exOpen = e.target.open; if (e.target.open) drawCharts(); } }, true);

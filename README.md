@@ -6,6 +6,7 @@ Mon carnet d'entraînement parkour : calendrier de la saison, séances de la sem
 - Données : Supabase, même projet et même compte que L'Établi, mais une table à part (`carnet`) et un dossier de fichiers privé (`carnet`).
 - Fonctionne hors ligne : les changements partent dès que le réseau revient.
 - Le programme (blocs, séances, conseils) est dans `programme.json`. Quand Claude publie une nouvelle version, l'app l'installe toute seule à l'ouverture. Ton journal, tes charges et tes tests ne sont jamais dans ce dépôt.
+- Tu peux aussi modifier le programme dans l'app (Calendrier → Modifier sur un bloc, ou Afficher → Modifier → Modifier les exercices). Un bloc ou une séance modifié dans l'app n'est plus écrasé par les mises à jour de Claude : la version de Claude attend dans **Données → Programme**, où tu choisis de la prendre ou de garder la tienne.
 
 ## Mise en route (une seule fois)
 
