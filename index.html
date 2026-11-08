@@ -447,6 +447,20 @@ body.ov-open{overflow:hidden}
 .ask-card h3{font-size:19px;margin:0}
 .ask-card p{margin:0 0 4px;font-size:13.5px;color:var(--ink-2)}
 .semo{margin-right:7px;font-size:.95em}
+.shint{font-size:12.5px;color:var(--ink-2);background:var(--sun-soft);border-radius:8px;padding:3px 8px;align-self:flex-start;margin-top:2px}
+.topbtns{display:flex;gap:6px;align-items:center}
+.gear{all:unset;cursor:pointer;width:28px;height:24px;border-radius:99px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:var(--ink-2)}
+.gear[aria-current="page"]{background:var(--accent-pastel);border-color:var(--accent);color:var(--accent-ink)}
+.gear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grange{font-family:var(--f-body);font-size:13px;font-weight:500;letter-spacing:0}
+.month.shut{gap:4px;padding-bottom:4px;border-bottom:1px dashed var(--line)}
+.sh-tx .act2{margin-top:6px}
+.srow-b.two{grid-template-columns:repeat(2,minmax(0,1fr));max-width:280px}
+.fq-c button.wide{min-width:0;padding:0 16px;font-size:15px}
+.btn.hold{align-self:flex-start;padding:12px 18px;font-size:16px;font-weight:700;background:var(--sun-soft);border-color:var(--sun)}
+.holdrun{display:flex;align-items:center;gap:12px}
+.hold-t{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums;color:var(--accent-ink)}
+.holdrun.done .hold-t{color:var(--mint-ink);font-size:28px}
 </style>
 </head>
 <body>
@@ -456,15 +470,13 @@ body.ov-open{overflow:hidden}
     <div class="brand">
       <h1>Carnet Parkour</h1>
       <span class="sub" id="brand-sub">Saison 2026–27 · objectif Skills</span>
-      <button class="mode" id="sync" type="button" data-goto="donnees" title="Synchronisation">…</button>
+      <span class="topbtns"><button class="mode" id="sync" type="button" data-goto="donnees" title="Synchronisation">…</button><button class="gear" id="gear" type="button" aria-label="Données et réglages" title="Données et réglages">⚙︎</button></span>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections">
       <button data-view="calendrier">Calendrier</button>
       <button data-view="semaine">Semaine</button>
       <button data-view="suivi">Suivi</button>
       <button data-view="nutrition">Nutrition</button>
-      <span class="spacer"></span>
-      <button data-view="donnees">Données</button>
     </nav>
   </div>
 </header>
@@ -559,9 +571,22 @@ const isDeload = w => { const b = blockOf(w); return !!(b && b.deload === w.id);
 const eventsSorted = () => Object.entries(S.data.events).map(([id,e]) => ({id,...e})).filter(e => e.start).sort((a,b) => a.start < b.start ? -1 : 1);
 function eventsOf(w){ return eventsSorted().filter(e => { const a = pd(e.start), b = pd(e.end || e.start); return a <= w.sun && b >= w.mon; }); }
 function currentWeekId(){ return isoWeekId(todayUTC()); }
+/* Tests : première séance de chaque nouveau bloc (la semaine qui suit la fin d'un bloc). */
+function testWeekIds(){
+  const tf = cfg().trackingFrom || "0000"; const out = new Set();
+  blocksSorted().forEach(b => { if (b.tests === false) return; const id = isoWeekId(addDays(pd(b.end), 1)); if (id >= tf) out.add(id); });
+  return out;
+}
+const isTestWeek = id => testWeekIds().has(id);
+function testsSession(){
+  const c = S.data.content.tests && S.data.content.tests.session; if (c) return c;
+  for (const wk of Object.values(S.data.weeks)) { const t = (wk.sessions || []).find(x => x.id === "s-tests"); if (t) return t; }
+  return null;
+}
 function planOf(id){
   const own = S.data.weeks[id]; const w = weekById(id); const b = w ? blockOf(w) : null;
-  const keep = ss => (ss || []).filter(x => !x.onlyIf);
+  const addTests = ss => { ss = ss || []; if (!isTestWeek(id) || ss.some(x => x.id === "s-tests")) return ss; const t = testsSession(); return t ? [t, ...ss] : ss; };
+  const keep = ss => (addTests(ss) || []).filter(x => !x.onlyIf);
   if (own && own.sessions && own.sessions.length) return { ...own, sessions: resolveWeek(keep(own.sessions), w, b, false), fromTemplate:false, block:b };
   const tpl = b && b.template && b.template.sessions ? b.template.sessions : null;
   return { ...(own || {}), sessions: resolveWeek(keep(tpl), w, b, true), fromTemplate: !!tpl, block:b };
@@ -614,7 +639,7 @@ function resolveWeek(ss, w, b, fromTpl){
    3. la dernière charge notée dans le bloc + la progression prévue (it.step), si les reps prévues ont été faites ;
    4. sinon la charge du programme. Pas de hausse en semaine de décharge. */
 function loadPlan(wk, s, it){
-  const lr = numRange(it.load); if (!lr) return null;
+  const lr = /kg/i.test(it.load || "") ? numRange(it.load) : null; if (!lr) return null;
   const w = weekById(wk); const b = w && blockOf(w); const key = s.id + ":" + it.id; const r2 = v => Math.round(v * 100) / 100;
   const wm = S.data.logs[wk] && S.data.logs[wk].mods && S.data.logs[wk].mods[key];
   if (wm && wm.load != null) return { base: wm.load, from: wk, up: 0, missed: false, src: "mod" };
@@ -632,7 +657,29 @@ function loadPlan(wk, s, it){
     const missed = !!(need && got != null && got < need[0]); const up = missed ? 0 : step;
     return { base: r2(last.v + up), from: last.id, up, missed, src: "log" };
   }
+  const est = b ? estFromHistory(wk, b, it) : null;
+  if (est) return est;
   return { base: lr[0], from: null, up: 0, missed: false, src: "prog" };
+}
+/* Nouveau bloc sans séance notée : charge estimée depuis ce que tu as vraiment soulevé avant (16 semaines max),
+   (meilleure des 4 dernières semaines notées), pour le bas de la fourchette de reps du bloc, avec la même marge de 2 reps en réserve. */
+function estFromHistory(wk, b, it){
+  const ex = it.ex || it.id; const r = numRange(it.reps); if (!r || it.unit === "reps") return null;
+  const lim = isoWeekId(addDays(pd(b.start), -7 * 16));
+  const ids = Object.keys(S.data.logs).filter(id => id < isoWeekId(pd(b.start)) && id >= lim).sort().reverse();
+  let best = null, seen = 0;
+  for (const id of ids) {
+    const hits = Object.entries((S.data.logs[id] && S.data.logs[id].actual) || {}).filter(([k, a]) => (a.ex || k.split(":")[1]) === ex && numOrNull(a.load) != null && parseReps(a.reps) != null);
+    if (!hits.length) continue;
+    const W = WEIGHTED.has(ex); const bw = W ? bwAt(id) : 0;
+    hits.forEach(([, a]) => { const e1 = (numOrNull(a.load) + bw) * (1 + (parseReps(a.reps) + 2) / 30); if (!best || e1 > best.e1) best = { e1, bw, id }; });
+    if (++seen >= 4) break;
+  }
+  if (best) {
+    const inc = kgInc(it); const v = Math.floor((best.e1 / (1 + (r[0] + 2) / 30) - best.bw) / inc) * inc;
+    if (v > 0) return { base: Math.round(v * 100) / 100, from: best.id, up: 0, missed: false, src: "est" };
+  }
+  return null;
 }
 const tracked = id => id >= (cfg().trackingFrom || "0000");
 const sessWeight = s => s.weight ?? (s.kind === "endurance" || s.id === "s-pk2" ? 0.7 : 1);
@@ -794,6 +841,7 @@ document.getElementById("tabs").addEventListener("click", e => { const b = e.tar
 function render(){
   pendingRender = false;
   document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.view === S.view ? "page" : "false"));
+  document.getElementById("gear").setAttribute("aria-current", S.view === "donnees" ? "page" : "false");
   setSync();
   if (!S.week) S.week = currentWeekId();
   const views = { calendrier: vCalendar, semaine: vWeek, suivi: vStats, nutrition: vNutrition, donnees: vData };
@@ -814,7 +862,7 @@ function vCalendar(){
   const weeks = seasonWeeks(); const now = currentWeekId(); const today = todayUTC(); const hereIdx = weeks.findIndex(w => w.id === now);
   const marks = weeks.map(w => {
     const evs = eventsOf(w); const dl = isDeload(w);
-    const sym = evs.some(e => e.type === "competition") ? `<i class="m comp"></i>` : dl ? `<i class="m dl">D</i>` : evs.length ? `<i class="m ev"></i>` : "";
+    const sym = evs.some(e => e.type === "competition") ? `<i class="m comp"></i>` : dl ? `<i class="m dl">D</i>` : evs.length || isTestWeek(w.id) ? `<i class="m ev"></i>` : "";
     return `<button class="mk ${w.id === now ? "now" : ""}" data-action="open-week" data-week="${w.id}" aria-label="${wkLabel(w.id)}, ${fmtRange(w.mon,w.sun)}${dl ? ", décharge" : ""}">${sym}</button>`;
   }).join("");
   const lanes = TRACKS.map(([k,,short]) => `<div class="lane"><span class="lane-l">${short}</span><div class="cells" style="--n:${weeks.length}">${weeks.map(w => { const p = phaseOf(w,k);
@@ -827,34 +875,31 @@ function vCalendar(){
   // groups: by block, else by month
   const groups = [];
   weeks.forEach(w => { const b = blockOf(w); const t = addDays(w.mon,3);
-    const key = b ? "b:" + b.id : "m:" + t.getUTCFullYear() + "-" + t.getUTCMonth();
-    let g = groups[groups.length-1]; if (!g || g.key !== key) groups.push(g = {key, block:b, label: b ? "" : MOL[t.getUTCMonth()] + " " + t.getUTCFullYear(), weeks:[]}); g.weeks.push(w); });
+    const ph = b ? null : phaseOf(w, "bas");
+    const key = b ? "b:" + b.id : ph ? "p:" + ph.id : "m:" + t.getUTCFullYear() + "-" + t.getUTCMonth();
+    let g = groups[groups.length-1]; if (!g || g.key !== key) groups.push(g = {key, block:b, label: b ? "" : ph ? esc(phName(ph)) : MOL[t.getUTCMonth()] + " " + t.getUTCFullYear(), weeks:[]}); g.weeks.push(w); });
   const sections = groups.map(g => {
-    const done = g.weeks.every(w => w.sun < today); const open = !done || !!(S.ui.openG && S.ui.openG[g.key]);
+    if (g.weeks.every(w => w.sun < today)) return "";
+    const cur = g.weeks.some(w => w.id === now); const open = cur || !!(S.ui.openG && S.ui.openG[g.key]);
     const w0 = g.block ? weekById(blockWeeks(g.block)[Math.min(1, blockWeeks(g.block).length-1)]) : g.weeks[0];
     const summary = TRACKS.map(([k,,short]) => { const p = phaseOf(w0, k); return p ? `<span class="tp" style="--ph:${phVar(p)}"><i></i>${short} : ${esc(phName(p))}</span>` : ""; }).join("");
     const bw = g.block ? blockWeeks(g.block) : g.weeks.map(w => w.id);
     const title = g.block ? esc(g.block.name) : g.label;
     const range = `${wkLabel(bw[0])}–${wkLabel(bw[bw.length-1])} · ${bw.length} sem.${g.block && g.block.deload ? " · décharge " + wkLabel(g.block.deload) : ""}`;
-    if (done) return "";
-    if (done && !open) return `<section class="month"><button class="gcol" data-action="gopen" data-k="${esc(g.key)}" aria-expanded="false"><span class="chev" aria-hidden="true"></span><span class="gtitle">${title}</span><span class="muted grange">${range} · terminé</span></button></section>`;
-    const toggle = done ? `<button class="gcol open" data-action="gopen" data-k="${esc(g.key)}" aria-expanded="true"><span class="chev" aria-hidden="true"></span><span class="gtitle">${title}</span><span class="muted grange">${range} · terminé</span></button>` : "";
-    let head;
-    if (done) head = toggle;
-    else if (g.block) {
-      head = `<div class="bhead"><div class="between"><h3>${title} <span class="muted" style="font-family:var(--f-body);font-size:14px;font-weight:500;letter-spacing:0">${range}</span></h3></div>
-        ${g.block.goal ? `<p class="bgoal">${esc(g.block.goal)}</p>` : ""}<div class="row">${summary}</div></div>`;
-    } else head = `<h3>${g.label}</h3>`;
-    return `<section class="month">${head}<div class="weeks">${g.weeks.map(w => tile(w, now, today)).join("")}</div></section>`;
+    const tools = g.block && typeof progEditBtn === "function" ? progEditBtn(g.block) : "";
+    const head = cur
+      ? `<div class="between"><h3>${title} <span class="muted grange">${range}</span></h3>${tools}</div>`
+      : `<div class="between"><button class="gcol ${open ? "open" : ""}" data-action="gopen" data-k="${esc(g.key)}" aria-expanded="${open}"><span class="chev" aria-hidden="true"></span><span class="gtitle">${title}</span><span class="muted grange">${range}</span></button>${tools}</div>`;
+    return `<section class="month ${open ? "" : "shut"}">${head}${open && g.block && g.block.goal ? `<p class="bgoal">${esc(g.block.goal)}</p>` : ""}${summary ? `<div class="row">${summary}</div>` : ""}
+      ${open ? `<div class="weeks">${g.weeks.map(w => tile(w, now, today)).join("")}</div>` : ""}</section>`;
   }).join("");
 
   const upcoming = eventsSorted().filter(e => pd(e.end || e.start) >= today);
   return `
   <section class="season">
     <div class="between"><div><div class="eyebrow">Saison · ${weeks.length} semaines, du ${fmtLong(ds(weeks[0].mon))} au ${fmtLong(ds(weeks[weeks.length-1].sun))}</div><h2>Calendrier</h2></div>
-      <div class="row"><button class="btn" data-action="toggle" data-k="phases">Modifier blocs & phases</button><button class="btn primary" data-action="toggle" data-k="evform">+ Événement</button></div></div>
+      <div class="row"><button class="btn primary" data-action="toggle" data-k="evform">+ Événement</button></div></div>
     ${S.ui.evform ? eventForm() : ""}
-    ${S.ui.phases ? blockEditor() + phaseEditor() : ""}
     ${hereBanner()}
     <div class="lanes">
       ${hereIdx >= 0 ? `<div class="lane"><span class="lane-l"></span><div class="here-pos"><span style="left:${((hereIdx+0.5)/weeks.length*100).toFixed(2)}%">ici</span></div></div>` : ""}
@@ -874,7 +919,7 @@ function tile(w, now, today){
   const evs = eventsOf(w); const pr = weekProgress(w.id); const dl = isDeload(w); const b = blockOf(w);
   const pos = b ? blockWeeks(b).indexOf(w.id) + 1 : 0;
   const cls = ["wk", w.sun < today ? "past" : "", w.id === now ? "now" : "", dl ? "deload" : ""].join(" ");
-  const chips = evs.slice(0,2).map(e => `<span class="chip ${esc(e.type)}" title="${esc(EVT[e.type]||"")} · ${esc(e.title)}">${esc(e.title || EVT[e.type])}</span>`).join("") + ctxChips(w.id);
+  const chips = (isTestWeek(w.id) ? `<span class="chip test">Tests</span>` : "") + evs.slice(0,2).map(e => `<span class="chip ${esc(e.type)}" title="${esc(EVT[e.type]||"")} · ${esc(e.title)}">${esc(e.title || EVT[e.type])}</span>`).join("") + ctxChips(w.id);
   const bands = TRACKS.map(([k,,short]) => { const p = phaseOf(w,k); return `<span class="band ${p ? "" : "none"}" style="--ph:${phVar(p)}"><b>${short}</b><span>${p ? esc(PHASES[p.type]?.short || phName(p)) : "—"}</span></span>`; }).join("");
   return `<button class="${cls}" data-action="open-week" data-week="${w.id}">
     <span class="top"><span class="n">${wkLabel(w.id)}</span>${pr.planned && tracked(w.id) ? `<span class="num prog">${pr.done}/${pr.planned}</span>` : ""}</span>
@@ -906,36 +951,6 @@ function eventForm(){
     <div class="row"><button class="btn primary" type="submit">Ajouter</button><button class="btn ghost" type="button" data-action="toggle" data-k="evform">Annuler</button></div>
   </form>`;
 }
-function blockEditor(){
-  const rows = blocksSorted().map(b => { const conf = S.confirm === "bl:" + b.id; const bw = blockWeeks(b);
-    return `<div class="grid-form edrow" data-block="${b.id}">
-      <div class="field"><label for="bl-n-${b.id}">Nom</label><input id="bl-n-${b.id}" type="text" data-bf="name" value="${esc(b.name)}"></div>
-      <div class="field"><label for="bl-s-${b.id}">Début (lundi)</label><input id="bl-s-${b.id}" type="date" data-bf="start" value="${esc(b.start)}"></div>
-      <div class="field"><label for="bl-e-${b.id}">Fin (dimanche)</label><input id="bl-e-${b.id}" type="date" data-bf="end" value="${esc(b.end)}"></div>
-      <div class="field"><label for="bl-d-${b.id}">Décharge</label><select id="bl-d-${b.id}" data-bf="deload"><option value="">aucune</option>${bw.map(id => `<option value="${id}" ${b.deload===id?"selected":""}>${wkLabel(id)}</option>`).join("")}</select></div>
-      <div class="field"><button class="btn small ${conf ? "danger" : "ghost"}" data-action="del-block" data-id="${b.id}">${conf ? "Confirmer" : "Supprimer"}</button></div>
-    </div>`; }).join("");
-  return `<div class="panel"><div class="between"><h3>Blocs</h3><button class="btn small" data-action="add-block">+ Ajouter un bloc</button></div>
-    <p class="muted" style="margin:0">Un bloc dure ~6 semaines et finit en général par une semaine de décharge. Ses séances modèles s'appliquent aux semaines qui n'ont pas de programme propre.</p>${rows || `<div class="muted">Aucun bloc.</div>`}</div>`;
-}
-function phaseEditor(){
-  const rows = phasesSorted().map(p => phaseRow(p)).join("");
-  return `<div class="panel"><div class="between"><h3>Phases haut / bas du corps</h3><button class="btn small" data-action="add-phase">+ Ajouter une phase</button></div>
-    <p class="muted" style="margin:0">Le bas et le haut du corps ont chacun leurs phases : le bas peut être en hypertrophie pendant que le haut est en force. Une semaine prend la phase qui contient son jeudi.</p>
-    ${rows || `<div class="muted">Aucune phase.</div>`}</div>`;
-}
-function phaseRow(p){
-  const conf = S.confirm === "ph:" + p.id;
-  return `<div class="grid-form edrow" data-phase="${p.id}">
-    <div class="field"><label for="ph-k-${p.id}">Piste</label><select id="ph-k-${p.id}" data-pf="track">${TRACKS.map(([k,l]) => `<option value="${k}" ${p.track===k?"selected":""}>${l}</option>`).join("")}</select></div>
-    <div class="field"><label for="ph-n-${p.id}">Nom</label><input id="ph-n-${p.id}" type="text" data-pf="name" value="${esc(p.name)}"></div>
-    <div class="field"><label for="ph-t-${p.id}">Qualité</label><select id="ph-t-${p.id}" data-pf="type">${Object.entries(PHASES).map(([k,v]) => `<option value="${k}" ${p.type===k?"selected":""}>${v.label}</option>`).join("")}</select></div>
-    <div class="field"><label for="ph-s-${p.id}">Début</label><input id="ph-s-${p.id}" type="date" data-pf="start" value="${esc(p.start)}"></div>
-    <div class="field"><label for="ph-e-${p.id}">Fin</label><input id="ph-e-${p.id}" type="date" data-pf="end" value="${esc(p.end)}"></div>
-    <div class="field"><button class="btn small ${conf ? "danger" : "ghost"}" data-action="del-phase" data-id="${p.id}">${conf ? "Confirmer" : "Supprimer"}</button></div>
-  </div>`;
-}
-
 /* ---------- views: week ---------- */
 function vWeek(){
   const w = weekById(S.week) || weekById(currentWeekId());
@@ -946,8 +961,9 @@ function vWeek(){
   const now = currentWeekId(); const pr = weekProgress(w.id); const b = plan.block; const dl = isDeload(w);
   const pos = b ? blockWeeks(b).indexOf(w.id) + 1 : 0;
   const isDone = s => !!(log.sessions && log.sessions[s.id] && log.sessions[s.id].done);
-  const sorted = plan.sessions.map((s,i) => ({s,i})).sort((x,y) => (isDone(x.s) - isDone(y.s)) || (x.i - y.i)).map(x => x.s);
-  const sessions = sorted.length ? sorted.map(s => sessRow(w.id, s, log)).join("") :
+  const sorted = plan.sessions.map((s,i) => ({s,i})).sort((x,y) => (isDone(x.s) - isDone(y.s)) || (!!x.s.optional - !!y.s.optional) || (x.i - y.i)).map(x => x.s);
+  const hint = nervHint(w.id);
+  const sessions = sorted.length ? sorted.map(s => sessRow(w.id, s, log, hint)).join("") :
     `<div class="empty"><strong>Pas encore de programme pour cette semaine.</strong> Demande à Claude de la remplir, ou note directement ce que tu as fait dans le journal ci-dessous.</div>`;
   const pills = TRACKS.map(([k,,short]) => { const p = phaseOf(w,k); return p ? `<span class="pill" style="--ph:${phVar(p)}">${short} · ${esc(phName(p))}</span>` : ""; }).join("");
   const mainS = plan.sessions.filter(s => !s.optional); const total = mainS.reduce((a,s) => a + (s.min || 0), 0); const free = mainS.some(s => !s.min);
@@ -962,7 +978,8 @@ function vWeek(){
     <div><div class="eyebrow">${b ? esc(b.name) + " · semaine " + pos + "/" + blockWeeks(b).length : "Hors bloc"} · ${pr.planned ? pr.done + "/" + pr.planned + " séances faites" : "aucune séance prévue"}</div>
       <h2>${wkLabel(w.id)} · ${fmtRange(w.mon,w.sun)} ${w.sun.getUTCFullYear()}</h2></div>
     <div class="row">${pills}
-      ${evs.map(e => `<span class="chip ${esc(e.type)}"><b>${esc(EVT[e.type]||"")}</b> ${esc(e.title)}</span>`).join("")}
+      ${isTestWeek(w.id) ? `<span class="chip test"><b>Tests</b></span>` : ""}
+      ${evs.map(e => `<span class="chip ${esc(e.type)}">${e.title && e.title !== EVT[e.type] ? `<b>${esc(EVT[e.type]||"")}</b> ${esc(e.title)}` : `<b>${esc(EVT[e.type] || e.title)}</b>`}</span>`).join("")}
       <button class="btn small ghost" data-action="ev-here" data-start="${ds(w.mon)}">+ Événement</button>
     </div>
     ${dl ? `<div class="dlbanner"><b>Semaine de décharge.</b> ${esc((b && b.deloadNote) || "Séries réduites de 40 à 50 %, mêmes charges. Aucun max, sauf la session de tests.")}</div>` : ""}
@@ -1000,26 +1017,39 @@ function extrasPanel(log){
 const fxIcons = s => (s.nerv ? `<span class="fx" title="Très exigeante pour le système nerveux">⚡<span class="sr">Très exigeante pour le système nerveux</span></span>` : "") + (s.doms ? `<span class="fx" title="Grosses courbatures probables">🔥<span class="sr">Grosses courbatures probables</span></span>` : "");
 const SESS_EMOJI = { "s-haut":"💪", "s-bas":"🦵", "s-pk1":"👟", "s-pk2":"👟", "s-endu":"🚴", "s-vo2":"🫁", "s-tests":"📏", "s-voyage":"🎒" };
 const sessEmoji = s => s.emoji || SESS_EMOJI[s.id] || ({ parkour:"👟", endurance:"🚴", intervalles:"🫁", test:"📏" })[s.kind] || (/haut/i.test(s.title || "") ? "💪" : /bas|jambe/i.test(s.title || "") ? "🦵" : "🏋️");
+/* Dernière séance ⚡ faite (cette semaine ou la précédente), pour garder 48 h entre deux séances intenses. */
+function lastNervDate(wk){
+  const w = weekById(wk); if (!w) return null; let best = null;
+  [isoWeekId(addDays(w.mon, -7)), wk].forEach(id => { const wd = weekById(id); const log = S.data.logs[id] || {};
+    planOf(id).sessions.forEach(x => { const st = log.sessions && log.sessions[x.id]; if (!x.nerv || !st || !st.done) return;
+      const d = st.date || (typeof st.day === "number" ? ds(addDays(wd.mon, st.day)) : null); if (d && (!best || d > best)) best = d; }); });
+  return best;
+}
+function nervHint(wk){
+  if (wk !== currentWeekId()) return ""; const d = lastNervDate(wk); if (!d) return "";
+  const days = Math.round((todayUTC() - pd(d)) / 86400000);
+  return days <= 0 ? "Tu as déjà fait une séance ⚡ aujourd'hui : celle-ci plutôt dans 2 jours." : days === 1 ? "Séance ⚡ hier : idéalement à partir de demain." : "";
+}
 const dayShort = d => { const x = pd(d); return DAYS[(x.getUTCDay() + 6) % 7].toLowerCase() + " " + x.getUTCDate(); };
-function sessRow(wk, s, log){
+function sessRow(wk, s, log, hint){
   const st = (log.sessions && log.sessions[s.id]) || {};
-  const steps = runSteps(s); const inRun = !st.done && st.run && steps.length;
+  const steps = guided(s) ? runSteps(s, st) : []; const inRun = !st.done && st.run && steps.length;
   const status = st.done ? `<span class="sstat ok">Faite ✓${st.date ? " · " + dayShort(st.date) : ""}</span>`
     : inRun ? `<span class="sstat run">En cours · ${Math.min(st.run.i, steps.length)}/${steps.length}</span>` : "";
   return `<article class="srow ${st.done ? "done" : ""}">
     <div class="srow-t">
       <div class="row">${s.kind ? `<span class="tag">${esc(KINDS[s.kind] || s.kind)}</span>` : ""}${s.optional ? `<span class="tag opt">optionnelle</span>` : ""}${fxIcons(s)}${s.min || s.duration ? `<span class="muted" style="font-size:12.5px">${s.min ? "≈ " + fmtMin(s.min) : esc(s.duration)}</span>` : ""}</div>
-      <h3><span class="semo" aria-hidden="true">${sessEmoji(s)}</span>${esc(s.title)}</h3>${status}
+      <h3><span class="semo" aria-hidden="true">${sessEmoji(s)}</span>${esc(s.title)}</h3>${status}${hint && s.nerv && !st.done ? `<span class="shint">${esc(hint)}</span>` : ""}
     </div>
-    <div class="srow-b">
+    <div class="srow-b ${guided(s) ? "" : "two"}">
       <button class="btn" data-action="show" data-sid="${esc(s.id)}">Afficher</button>
-      <button class="btn primary" data-action="run" data-sid="${esc(s.id)}" ${steps.length ? "" : "disabled"}>${inRun ? "Reprendre" : "Démarrer"}</button>
+      ${guided(s) ? `<button class="btn primary" data-action="run" data-sid="${esc(s.id)}" ${steps.length ? "" : "disabled"}>${inRun ? "Reprendre" : "Démarrer"}</button>` : ""}
       <button class="btn donebtn" aria-pressed="${st.done ? "true" : "false"}" data-action="toggle-done" data-sid="${esc(s.id)}">${st.done ? "Fait ✓" : "Fait"}</button>
     </div></article>`;
 }
 function rxOf(wk, s, it){
   const lp = it.load && it.unit !== "reps" && !it.tests ? loadPlan(wk, s, it) : null;
-  const ld = lp && lp.src !== "prog" ? "≈ " + (/^\s*\+/.test(it.load) ? "+" : "") + fmtNum(lp.base, 2) + " kg" : it.load;
+  const ld = lp && lp.src !== "prog" ? "≈ " + kgTxt(it, lp.base) : it.load;
   return [it.sets && it.reps ? it.sets + " × " + it.reps : (it.reps || (it.sets ? it.sets + " séries" : "")), ld ? "@ " + ld : ""].filter(Boolean).join(" ");
 }
 function doneLine(a){
@@ -1041,8 +1071,9 @@ function showSheet(wk, s, log){
   const body = (s.blocks || []).map(b => {
     const grp = SS_KINDS[b.kind]; const all = b.items || []; const letter = grp && all.length ? String.fromCharCode(65 + L++) : "";
     const items = all.map((it, i) => ({ it, i })).filter(x => E || !x.it.off); if (!items.length) return "";
+    const alt = b.choice ? (choiceGroups(s)[b.choice] || []) : []; const altIdx = alt.indexOf(b.name);
     return `<div class="sh-b">
-      <div class="sh-bh">${grp ? `<span class="ssl" aria-hidden="true">${letter}</span>` : ""}<b>${esc(kindLabel(b))}</b>${b.rounds && !E ? `<span class="tag">${b.rounds} tours</span>` : ""}</div>
+      <div class="sh-bh">${grp ? `<span class="ssl" aria-hidden="true">${letter}</span>` : ""}${altIdx > 0 ? `<span class="tag">ou</span>` : alt.length > 1 ? `<span class="tag">au choix</span>` : ""}<b>${esc(kindLabel(b))}</b>${b.rounds && !E ? `<span class="tag">${b.rounds} tours</span>` : ""}</div>
       ${(b.rule || b.note) && !E ? `<p class="sh-rule">${esc(b.rule || b.note)}</p>` : ""}
       ${items.map(({ it, i }) => { const code = grp ? (all.length > 1 ? letter + (i+1) : letter) : ""; const key = s.id + ":" + it.id;
         const nm = `<div class="sh-nm">${code ? `<span class="code">${code}</span>` : ""}<span>${esc(it.name)}</span>${it.mod && !E ? `<span class="tag mod">modifié</span>` : ""}</div>`;
@@ -1050,8 +1081,8 @@ function showSheet(wk, s, log){
         const zk = wk + ":show:" + key; const big = S.ui.zoom === zk;
         return `<div class="sh-it ${big ? "zoomed" : ""}">${it.img ? `<button class="thumb ${big ? "big" : ""}" data-action="zoom" data-k="${esc(zk)}" aria-label="${big ? "Réduire" : "Agrandir"} l'image : ${esc(it.name)}"><img src="${BLANK}" data-mpath="${esc(mediaPath(it.img))}" alt="${esc(it.name)}"></button>` : ""}
           <div class="sh-tx">${nm}
-          <div class="sh-rx">${esc(rxOf(wk, s, it)) || "—"}${it.rest ? ` · repos ${esc(it.rest)}` : ""}</div>
-          ${it.cue ? `<div class="sh-cue">${esc(it.cue)}</div>` : ""}${doneLine(log.actual && log.actual[key])}</div></div>`; }).join("")}
+          ${it.tests ? "" : `<div class="sh-rx">${esc(rxOf(wk, s, it)) || "—"}${it.rest ? ` · repos ${esc(it.rest)}` : ""}</div>`}
+          ${it.cue ? `<div class="sh-cue">${esc(it.cue)}</div>` : ""}${doneLine(log.actual && log.actual[key])}${it.tests ? testRow(it) : ""}${it.videos ? `<div class="cuwrap">${cuStrip(wk + ":" + key)}</div>` : ""}</div></div>`; }).join("")}
     </div>`;
   }).join("");
   const w = weekById(wk); const b = w && blockOf(w);
@@ -1062,7 +1093,7 @@ function showSheet(wk, s, log){
       <button class="btn big" data-action="ed-save" data-scope="week">Non, cette séance seulement</button>
       <button class="btn ghost" data-action="ed-ask-cancel">Retour</button></div></div>` : "";
   const foot = E ? `<div class="sh-foot two"><button class="btn" data-action="ed-cancel">Annuler</button><button class="btn primary big" data-action="ed-done">Enregistrer</button></div>`
-    : runSteps(s).length ? `<div class="sh-foot"><button class="btn primary big" data-action="run" data-sid="${esc(s.id)}">Démarrer</button></div>` : "";
+    : guided(s) && runSteps(s).length ? `<div class="sh-foot"><button class="btn primary big" data-action="run" data-sid="${esc(s.id)}">Démarrer</button></div>` : "";
   return `<div class="ov" role="dialog" aria-modal="true" aria-labelledby="sh-title"><div class="scrim" data-action="${E ? "ed-cancel" : "ov-close"}"></div>
     <div class="sheet"><div class="sh-head"><div>${E ? `<span class="eyebrow">Modifier · ${wkLabel(wk)}</span>` : `<div class="row">${fxIcons(s)}${s.min || s.duration ? `<span class="muted" style="font-size:12.5px">${s.min ? "≈ " + fmtMin(s.min) : esc(s.duration)}</span>` : ""}</div>`}<h2 id="sh-title"><span class="semo" aria-hidden="true">${sessEmoji(s)}</span>${esc(s.title)}</h2></div>
       <div class="row" style="flex-wrap:nowrap">${E ? "" : `<button class="btn small" data-action="ed-start" data-sid="${esc(s.id)}">Modifier</button>`}<button class="x" data-action="${E ? "ed-cancel" : "ov-close"}" aria-label="${E ? "Annuler les modifications" : "Fermer"}">✕</button></div></div>
@@ -1124,7 +1155,7 @@ function edAction(a, b){
     const k = b.dataset.k, f = b.dataset.f, d = +b.dataset.d; const v = E.v[k]; const it = E.items[k];
     if (f === "sets") v.sets = Math.max(1, v.sets + d);
     else if (f === "reps") v.reps = shiftReps(v.reps, d);
-    else if (f === "load") { const inc = /^\s*\+/.test(it.load || "") ? 1 : 2.5; v.load = Math.max(0, Math.round((v.load + d * inc) * 100) / 100); }
+    else if (f === "load") { const inc = kgInc(it); v.load = Math.max(0, Math.round((v.load + d * inc) * 100) / 100); }
   }
   else if (a === "ed-off") { const v = E.v[b.dataset.k]; v.off = !v.off; }
   else if (a === "ed-cancel") S.ui.edit = null;
@@ -1148,9 +1179,16 @@ function restSeq(b){
   if (items.length === 4 && /enchaîn/i.test(b.rule || "")) return [0, between, 0, after];
   return items.map((_, i) => i === items.length - 1 ? after : between);
 }
-function runSteps(s){
+/* Blocs « au choix » (b.choice = même clé) : seul celui choisi entre dans la séance guidée. */
+function choiceGroups(s){
+  const g = {}; (s.blocks || []).forEach(b => { if (b.choice) (g[b.choice] ||= []).push(b.name); }); return g;
+}
+const chosen = (s, st, key) => { const opts = choiceGroups(s)[key] || []; const v = st && st.choice && st.choice[key]; return opts.includes(v) ? v : opts[0]; };
+const guided = s => !["parkour","endurance"].includes(s.kind);
+function runSteps(s, st){
   const steps = []; let L = 0;
   (s.blocks || []).forEach(b => {
+    if (b.choice && b.name !== chosen(s, st, b.choice)) return;
     const all = b.items || []; const grp = !!SS_KINDS[b.kind]; const letter = grp && all.length ? String.fromCharCode(65 + L++) : "";
     const items = all.map((it, i) => ({ it, i })).filter(x => !x.it.off); if (!items.length) return;
     const code = i => grp ? (all.length > 1 ? letter + (i+1) : letter) : "";
@@ -1170,11 +1208,11 @@ const RUN = { iv:null, lock:null };
 function runCtx(){
   const R = S.run; if (!R) return null; const plan = planOf(R.wk); const s = plan.sessions.find(x => x.id === R.sid); if (!s) return null;
   const log = S.data.logs[R.wk] || {}; const st = (log.sessions && log.sessions[s.id]) || {};
-  return { R, s, log, st, steps: runSteps(s), skip: new Set((st.run && st.run.skip) || []) };
+  return { R, s, log, st, steps: runSteps(s, st), skip: new Set((st.run && st.run.skip) || []) };
 }
 const loggable = it => it.log !== false && !it.tests;
 const repsRange = it => !isTimeOrDist(it.reps) ? numRange(it.reps) : null;
-const hasKg = it => it.unit !== "reps" && !it.tests && !!numRange(it.load);
+const hasKg = it => it.unit !== "reps" && !it.tests && /kg/i.test(it.load || "") && !!numRange(it.load);
 function stepKg(step, log){
   const it = step.it; if (!hasKg(it)) return null; const k = step.key + "#" + step.set;
   if (S.run.kg[k] != null) return S.run.kg[k];
@@ -1195,10 +1233,20 @@ function fmtReps(t){
   m = s.match(/^(\d+(?:\s*[–-]\s*\d+)?)\s*\/\s*jambe$/); if (m) return m[1] + " reps / jambe";
   return s;
 }
-const kgTxt = (it, kg) => (/^\s*\+/.test(it.load || "") ? "+" : "") + fmtNum(kg, 2) + " kg";
+const kgTxt = (it, kg) => (/^\s*\+/.test(it.load || "") ? "+" : "") + fmtNum(kg, 2) + " kg" + (/\/\s*main/.test(it.load || "") ? " / main" : "");
+const kgInc = it => it.inc || (/^\s*\+/.test(it.load || "") ? 1 : 2.5);
 function stepTarget(step, log){
   const it = step.it; const kg = stepKg(step, log);
   return [step.of > 1 ? "Série " + step.set + "/" + step.of : "", fmtReps(it.reps), kg != null ? kgTxt(it, kg) : (it.load || "")].filter(Boolean).join(" · ");
+}
+/* Exercice chronométré (ex. « 40 s », « 30 s / jambe », « 45–60 s ») : durée en secondes, sinon 0. */
+const holdSec = it => { const t = String(it.reps || ""); if (!/^\s*\d+(\s*[–-]\s*\d+)?\s*(s|min)\b/.test(t)) return 0; const d = durList(t)[0] || 0; return d > 0 && d <= 600 ? d : 0; };
+function holdCtl(step){
+  const R = S.run; const k = step.key + "#" + step.set; const h = R.hold && R.hold.k === k ? R.hold : null; const sec = holdSec(step.it);
+  if (!h) return `<button class="btn hold" data-action="run-hold">▶ Lancer ${fmtSec(sec)}</button>`;
+  const left = Math.max(0, h.end - Date.now()); const n = Math.ceil(left / 1000);
+  return left > 0 ? `<div class="holdrun"><span class="hold-t" id="hold-t">${Math.floor(n/60)}:${String(n % 60).padStart(2, "0")}</span><button class="btn small" data-action="run-hold-stop">Arrêter</button></div>`
+    : `<div class="holdrun done"><span class="hold-t">✓ ${fmtSec(sec)}</span><button class="btn small" data-action="run-hold">Relancer</button></div>`;
 }
 function runView(){
   const c = runCtx(); if (!c) return "";
@@ -1211,11 +1259,12 @@ function runView(){
   if (R.phase === "check") {
     const f = st.fatigue || {};
     const scale = (k, l) => `<div class="fq"><span class="fq-l">${l}</span><div class="fq-c" role="group" aria-label="${l}">${[1,2,3,4,5].map(v => `<button class="${f[k] === v ? "on" : ""}" aria-pressed="${f[k] === v}" data-action="run-fat" data-k="${k}" data-v="${v}">${v}</button>`).join("")}</div></div>`;
-    body = `<div class="run-body mid"><h2 class="run-h">${esc(s.title)}</h2>${scale("phys", "Fatigue physique")}${scale("ment", "Fatigue mentale")}<p class="muted fq-h">1 = en forme · 5 = vidé</p></div>`;
+    const ch = Object.entries(choiceGroups(s)).filter(([, o]) => o.length > 1).map(([k, o]) => `<div class="fq"><span class="fq-l">Au choix</span><div class="fq-c">${o.map(n => `<button class="wide ${chosen(s, st, k) === n ? "on" : ""}" aria-pressed="${chosen(s, st, k) === n}" data-action="run-choice" data-k="${esc(k)}" data-v="${esc(n)}">${esc(n)}</button>`).join("")}</div></div>`).join("");
+    body = `<div class="run-body mid"><h2 class="run-h">${esc(s.title)}</h2>${ch}${scale("phys", "Fatigue physique")}${scale("ment", "Fatigue mentale")}<p class="muted fq-h">1 = en forme · 5 = vidé</p></div>`;
     foot = `<button class="btn primary big" data-action="run-go">Démarrer l'entraînement</button>`;
   } else if (R.phase === "set") {
     const step = steps[R.i]; const it = step.it; const kg = stepKg(step, log); const reps = stepReps(step, log); const rr = repsRange(it);
-    const lest = /^\s*\+/.test(it.load || ""); const inc = lest ? 1 : 2.5;
+    const inc = kgInc(it);
     const kgCtl = kg != null ? `<div class="st-ctl"><span class="fq-l">Charge</span><div class="st-kg"><button data-action="run-kg" data-d="${-inc}" aria-label="Moins ${fmtNum(inc,1)} kg">−</button><b>${kgTxt(it, kg)}</b><button data-action="run-kg" data-d="${inc}" aria-label="Plus ${fmtNum(inc,1)} kg">+</button></div></div>` : "";
     const repsCtl = reps != null ? `<div class="st-ctl"><span class="fq-l">Reps faites</span><div class="fq-c">${Array.from({ length: rr[1] + 2 - Math.max(1, rr[0] - 3) + 1 }, (_, j) => Math.max(1, rr[0] - 3) + j).map(v => `<button class="${v === reps ? "on" : ""} ${v >= rr[0] && v <= rr[1] ? "pl" : ""}" aria-pressed="${v === reps}" data-action="run-reps" data-v="${v}">${v}</button>`).join("")}</div></div>` : "";
     const other = !hasKg(it) && it.load && !it.tests ? `<div class="st-load">${esc(it.load)}</div>` : "";
@@ -1223,7 +1272,7 @@ function runView(){
       <div class="st-blk">${step.code ? `<span class="code">${step.code}</span>` : ""}<span>${esc(step.bname)}</span></div>
       <h2 class="st-name">${esc(it.name)}</h2>
       ${step.of > 1 ? `<div class="st-set">Série ${step.set} / ${step.of}</div>` : ""}
-      ${it.reps ? `<div class="st-reps">${esc(fmtReps(it.reps))}</div>` : ""}${other}
+      ${it.reps ? `<div class="st-reps">${esc(fmtReps(it.reps))}</div>` : ""}${other}${holdSec(it) ? holdCtl(step) : ""}
       ${it.cue ? `<p class="st-cue">${esc(it.cue)}</p>` : ""}
       ${it.tests ? testRow(it) : ""}${it.videos ? `<div class="cuwrap">${cuStrip(R.wk + ":" + step.key)}</div>` : ""}
       ${kgCtl}${repsCtl}
@@ -1268,14 +1317,17 @@ function wakeLock(){ try { navigator.wakeLock && navigator.wakeLock.request("scr
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && S.run) { wakeLock(); runTick(); } });
 function runStart(sid){
   const plan = planOf(S.week); const s = plan.sessions.find(x => x.id === sid); if (!s) return;
-  const log = S.data.logs[S.week] || {}; const st = (log.sessions && log.sessions[sid]) || {}; const n = runSteps(s).length; if (!n) return;
+  const log = S.data.logs[S.week] || {}; const st = (log.sessions && log.sessions[sid]) || {}; const n = runSteps(s, st).length; if (!n) return;
   const resume = !st.done && st.run && st.run.i < n;
   S.run = { wk: S.week, sid, phase: resume ? "set" : "check", i: resume ? st.run.i : 0, kg: {}, reps: {}, restEnd: 0, restTotal: 0 };
   if (S.ui.ov) S.ui.ov = { type: "run", sid }; else ovOpen("run", sid);
   wakeLock(); render();
 }
 function runTick(){
-  const R = S.run; if (!R || R.phase !== "rest") { clearInterval(RUN.iv); RUN.iv = null; return; }
+  const R = S.run;
+  if (R && R.phase === "set" && R.hold) { const left = R.hold.end - Date.now(); if (left <= 0) { clearInterval(RUN.iv); RUN.iv = null; render(); return; }
+    const n = Math.ceil(left / 1000); const t = document.getElementById("hold-t"); if (t) t.textContent = Math.floor(n/60) + ":" + String(n % 60).padStart(2, "0"); return; }
+  if (!R || R.phase !== "rest") { clearInterval(RUN.iv); RUN.iv = null; return; }
   const left = R.restEnd - Date.now();
   if (left <= 0) { R.phase = "set"; clearInterval(RUN.iv); RUN.iv = null; render(); return; }
   const sec = Math.ceil(left / 1000); const t = document.getElementById("rc-time"); const b = document.getElementById("rc-bar");
@@ -1284,7 +1336,7 @@ function runTick(){
 }
 function nextIdx(steps, from, skip){ let j = from; while (j < steps.length && skip.has(steps[j].key)) j++; return j; }
 function runAdvance(c, j, rest){
-  const { R, s, steps } = c;
+  const { R, s, steps } = c; R.hold = null;
   patchLog(R.wk, l => {
     l.sessions ||= {}; const cur = { ...(l.sessions[s.id] || {}) }; const run = { t0: Date.now(), skip: [], ...(cur.run || {}) };
     if (j >= steps.length) {
@@ -1301,6 +1353,7 @@ function runAdvance(c, j, rest){
 function runAction(a, b){
   const c = runCtx(); if (!c) return; const { R, s, log, steps, skip } = c;
   if (a === "run-fat") { const k = b.dataset.k, v = +b.dataset.v; patchLog(R.wk, l => { l.sessions ||= {}; const cur = { ...(l.sessions[s.id] || {}) }; cur.fatigue = { ...(cur.fatigue || {}), [k]: v }; l.sessions[s.id] = cur; }); }
+  else if (a === "run-choice") { const k = b.dataset.k, v = b.dataset.v; patchLog(R.wk, l => { l.sessions ||= {}; const cur = { ...(l.sessions[s.id] || {}) }; cur.choice = { ...(cur.choice || {}), [k]: v }; l.sessions[s.id] = cur; }); }
   else if (a === "run-go") { patchLog(R.wk, l => { l.sessions ||= {}; const cur = { ...(l.sessions[s.id] || {}) }; cur.done = false; delete cur.date; cur.run = { i: 0, t0: Date.now(), skip: [] }; l.sessions[s.id] = cur; }); R.i = 0; R.phase = "set"; render(); }
   else if (a === "run-kg") { const step = steps[R.i]; const cur = stepKg(step, log); if (cur == null) return; R.kg[step.key + "#" + step.set] = Math.max(0, Math.round((cur + +b.dataset.d) * 100) / 100); render(); }
   else if (a === "run-reps") { const step = steps[R.i]; R.reps[step.key + "#" + step.set] = +b.dataset.v; render(); }
@@ -1324,6 +1377,8 @@ function runAction(a, b){
     patchLog(R.wk, l => { l.sessions ||= {}; const cur = { ...(l.sessions[s.id] || {}) }; cur.run = { t0: Date.now(), i: R.i, ...(cur.run || {}), skip: [...sk] }; l.sessions[s.id] = cur; });
     runAdvance(runCtx(), nextIdx(steps, R.i + 1, sk), 0);
   }
+  else if (a === "run-hold") { const step = steps[R.i]; if (!step) return; R.hold = { k: step.key + "#" + step.set, end: Date.now() + holdSec(step.it) * 1000 }; clearInterval(RUN.iv); RUN.iv = setInterval(runTick, 250); render(); }
+  else if (a === "run-hold-stop") { R.hold = null; clearInterval(RUN.iv); RUN.iv = null; render(); }
   else if (a === "run-plus") { R.restEnd += 15000; R.restTotal += 15000; runTick(); }
   else if (a === "run-next") { R.phase = "set"; clearInterval(RUN.iv); RUN.iv = null; render(); }
 }
@@ -1348,9 +1403,8 @@ function cuStrip(key){
     ${cur >= 0 ? `<div class="cuplay"><img src="${BLANK}" data-mpath="${esc(mediaPath(c.levels[cur].gif || c.levels[cur].poster))}" alt="Climb-up niveau ${c.levels[cur].n}"><button class="btn small ghost" data-action="vid" data-k="${esc(key)}|${cur}">Fermer</button></div>` : ""}`;
 }
 const CHECKIN = [
-  ["energie","Énergie",["1","2","3","4","5"]],["sommeil","Sommeil",["1","2","3","4","5"]],["envie","Envie",["1","2","3","4","5"]],
-  ["confiance","Confiance sur les sauts",["1","2","3","4","5"]],["stress","Stress",["faible","normal","élevé"]],
-  ["charge","Volume de la semaine",["pas assez","juste","trop"]],["douleur","Douleur max (0–10)",["0","1","2","3","4","5","6+"]]
+  ["energie","Forme (énergie, sommeil, envie)",["1","2","3","4","5"]],["confiance","Confiance sur les sauts",["1","2","3","4","5"]],
+  ["douleur","Douleur max (0–10)",["0","1","2","3","4","5","6+"]]
 ];
 function weekLog(wk, log){
   const ci = log.checkin || {};
@@ -1360,17 +1414,13 @@ function weekLog(wk, log){
       <button class="btn small ${conf ? "danger" : "ghost"}" data-action="del-photo" data-i="${i}">${conf ? "Confirmer" : "Retirer"}</button></figure>`; }).join("");
   const scales = CHECKIN.map(([k,l,opts]) => `<div class="ci"><span class="ci-l">${l}</span><span class="seg" role="group" aria-label="${l}">${opts.map(o => `<button class="${String(ci[k])===o ? "on" : ""}" aria-pressed="${String(ci[k])===o}" data-action="ci" data-k="${k}" data-v="${o}">${o}</button>`).join("")}</span></div>`).join("");
   return `<section class="panel" id="journal">
-    <div class="between"><h3>Journal & bilan de la semaine</h3><span class="muted" style="font-size:12.5px">Enregistré automatiquement</span></div>
+    <div class="between"><h3>Bilan de la semaine</h3><span class="muted" style="font-size:12.5px">Enregistré automatiquement</span></div>
     <div class="loggrid">
       <div class="field"><label for="lg-bw">Poids (kg)</label><input id="lg-bw" type="text" inputmode="decimal" data-log="bodyweight" value="${log.bodyweight ?? ""}"></div>
       <div class="field"><label for="lg-waist">Tour de taille au nombril (cm)</label><input id="lg-waist" type="text" inputmode="decimal" data-log="waist" value="${log.waist ?? ""}"></div>
     </div>
     <div class="cigrid">${scales}</div>
-    <div class="grid-form">
-      <div class="field"><label for="lg-gene">Nouvelle gêne ou douleur bizarre (où, quand)</label><input id="lg-gene" type="text" data-ci="gene" value="${esc(ci.gene || "")}"></div>
-      <div class="field"><label for="lg-miss">Séances sautées, et pourquoi</label><input id="lg-miss" type="text" data-ci="manquees" value="${esc(ci.manquees || "")}"></div>
-    </div>
-    <div class="field"><label for="lg-notes">Remarques (technique, progrès, ce qui a marché, une chose qui t'a surpris)</label><textarea id="lg-notes" data-log="notes">${esc(log.notes || "")}</textarea></div>
+    <div class="field"><label for="lg-notes">Remarques (gêne, technique, ce qui a marché…)</label><textarea id="lg-notes" data-log="notes">${esc(log.notes || "")}</textarea></div>
     <div class="between"><span class="eyebrow">Photos & captures vidéo</span>
       <label class="btn small" for="photo-in">+ Ajouter des photos</label><input id="photo-in" type="file" accept="image/*" multiple hidden></div>
     ${photos ? `<div class="photos">${photos}</div>` : `<div class="muted" style="font-size:13.5px">Pas encore de photo cette semaine.</div>`}
@@ -1430,7 +1480,7 @@ function vStats(){
   const curW = weekById(now); const curB = curW ? blockOf(curW) : null;
   let pDone = 0, pPlan = 0, wDone = 0, wPlan = 0;
   if (curB) blockWeeks(curB).forEach(id => { const w = weekById(id); if (w.mon <= today && tracked(id)) { const pr = weekProgress(id); pDone += pr.done; pPlan += pr.planned; wDone += pr.wDone; wPlan += pr.wPlanned; } });
-  const nextTest = eventsSorted().find(e => e.type === "test" && pd(e.start) >= today);
+  const nextTest = [...[...testWeekIds()].map(id => ({ start: ds(weekById(id).mon) })), ...eventsSorted().filter(e => e.type === "test")].filter(e => pd(e.start) >= addDays(today, -6)).sort((a,b) => a.start < b.start ? -1 : 1)[0];
   const nextComp = eventsSorted().find(e => e.type === "competition" && pd(e.start) >= today);
   const lastBw = bw.length ? bw[bw.length-1].y : null; const firstBw = bw.length ? bw[0].y : null;
   const lifts = collectLifts(); const liftKeys = Object.keys(lifts);
@@ -1443,6 +1493,8 @@ function vStats(){
   const ciPts = k => logsSorted.filter(([,l]) => l.checkin && numOrNull(l.checkin[k]) != null).map(([wk,l]) => ({label:wkLabel(wk), y:numOrNull(l.checkin[k])}));
   CHART_DATA.bw = {pts:bw, unit:"kg", kind:"line"}; CHART_DATA.waist = {pts:waist, unit:"cm", kind:"line"};
   CHART_DATA.lift = {pts:liftPts, unit:"kg", kind:"line"}; CHART_DATA.reg = {pts:reg, unit:"%", kind:"bar", max:100};
+  const fatPts = k => logsSorted.map(([wk,l]) => { const v = Object.values(l.sessions || {}).map(x => x && x.fatigue && x.fatigue[k]).filter(x => x != null); return v.length ? {label:wkLabel(wk), y: Math.round(v.reduce((a,b) => a + b, 0) / v.length * 10) / 10} : null; }).filter(Boolean);
+  CHART_DATA.fphys = {pts:fatPts("phys"), unit:"/5", kind:"line", min:1, max:5}; CHART_DATA.fment = {pts:fatPts("ment"), unit:"/5", kind:"line", min:1, max:5};
   CHART_DATA.energie = {pts:ciPts("energie"), unit:"/5", kind:"line", min:1, max:5}; CHART_DATA.confiance = {pts:ciPts("confiance"), unit:"/5", kind:"line", min:1, max:5};
   const daysTo = e => Math.round((pd(e.start) - today)/86400000);
   return `
@@ -1450,7 +1502,7 @@ function vStats(){
   <section class="kpis">
     <div class="kpi"><span class="eyebrow">Poids</span><span class="v num">${fmtNum(lastBw)}<small>kg</small></span><span class="s">${bw.length > 1 ? (lastBw-firstBw >= 0 ? "+" : "") + fmtNum(lastBw-firstBw) + " kg depuis " + bw[0].label : "note-le dans le journal"}</span></div>
     <div class="kpi"><span class="eyebrow">Bloc en cours</span><span class="v num">${wPlan ? Math.round(wDone/wPlan*100) : "–"}<small>%</small></span><span class="s">${curB ? esc(curB.name) + " · " + pDone + "/" + pPlan + " séances" : "pas de bloc"}</span></div>
-    <div class="kpi"><span class="eyebrow">Prochains tests</span><span class="v num">${nextTest ? daysTo(nextTest) : "–"}<small>j</small></span><span class="s">${nextTest ? fmtLong(nextTest.start) : "aucun prévu"}</span></div>
+    <div class="kpi"><span class="eyebrow">Prochains tests</span><span class="v num">${nextTest ? Math.max(0, daysTo(nextTest)) : "–"}<small>j</small></span><span class="s">${nextTest ? (daysTo(nextTest) <= 0 ? "cette semaine" : "semaine du " + fmtLong(nextTest.start)) : "aucun prévu"}</span></div>
     <div class="kpi"><span class="eyebrow">Prochaine compét</span><span class="v num">${nextComp ? daysTo(nextComp) : "–"}<small>j</small></span><span class="s">${nextComp ? esc(nextComp.title) : "à ajouter au calendrier"}</span></div>
   </section>
   <section class="panel"><h3>Progression de la force</h3>
@@ -1467,7 +1519,11 @@ function vStats(){
   </section>
   <section class="panel"><h3>Régularité</h3><div class="muted" style="font-size:13px">Part des séances prévues marquées faites, semaine par semaine. Zone 2 et parkour mid comptent 0,7, les autres séances 1.</div><div class="chart" data-chart="reg"></div></section>
   <section class="charts2">
-    <div class="panel"><h3>Énergie</h3><div class="muted" style="font-size:13px">Bilan hebdo, de 1 à 5.</div><div class="chart" data-chart="energie"></div></div>
+    <div class="panel"><h3>Fatigue physique</h3><div class="muted" style="font-size:13px">Avant séance, moyenne de la semaine. 1 = en forme, 5 = vidé.</div><div class="chart" data-chart="fphys"></div></div>
+    <div class="panel"><h3>Fatigue mentale</h3><div class="muted" style="font-size:13px">Avant séance, moyenne de la semaine. 1 = en forme, 5 = vidé.</div><div class="chart" data-chart="fment"></div></div>
+  </section>
+  <section class="charts2">
+    <div class="panel"><h3>Forme</h3><div class="muted" style="font-size:13px">Bilan de la semaine, de 1 à 5.</div><div class="chart" data-chart="energie"></div></div>
     <div class="panel"><h3>Confiance sur les sauts</h3><div class="muted" style="font-size:13px">Bilan hebdo, de 1 à 5.</div><div class="chart" data-chart="confiance"></div></div>
   </section>
   ${testsSection()}`;
@@ -1488,18 +1544,10 @@ function testsSection(){
       <td><button class="btn small ${conf ? "danger" : "ghost"}" data-action="del-test" data-id="${t.id}">${conf ? "Confirmer" : "Suppr."}</button></td></tr>`; }).join("");
   const seg = (k, l) => `<div class="ci"><span class="ci-l">${l} (1 à 5)</span><span class="seg rseg" role="radiogroup" aria-label="${l}">${[1,2,3,4,5].map(v => `<label><input type="radio" name="${k}" value="${v}"><span>${v}</span></label>`).join("")}</span></div>`;
   return `<section class="panel">
-    <div class="between"><h3>Tests</h3><button class="btn small" data-action="toggle" data-k="testform">+ Saisir des résultats</button></div>
-    <div class="muted" style="font-size:13px;max-width:70ch">Toutes les 6 semaines, frais, même terrain et mêmes chaussures. 3 essais, garder le meilleur. Distances en pieds.</div>
-    ${S.ui.testform ? `<form class="panel" data-form="test" style="background:var(--page)">
-      <div class="grid-form"><div class="field"><label for="t-date">Date</label><input id="t-date" name="date" type="date" required value="${ds(todayUTC())}"></div>
-      ${TEST_FIELDS.map(([k,l,u]) => `<div class="field"><label for="t-${k}">${l} (${u})</label><input id="t-${k}" name="${k}" type="text" inputmode="decimal"></div>`).join("")}</div>
-      <div class="eyebrow">Climb-up</div>
-      ${cuStrip("form")}
-      <div class="cigrid">${CU_FIELDS.map(([k,l]) => seg(k,l)).join("")}</div>
-      <div class="field"><label for="t-note">Note</label><input id="t-note" name="note" type="text"></div>
-      <div class="row"><button class="btn primary" type="submit">Enregistrer</button><button class="btn ghost" type="button" data-action="toggle" data-k="testform">Annuler</button></div></form>` : ""}
+    <h3>Tests</h3>
+    <div class="muted" style="font-size:13px;max-width:70ch">Première séance de chaque bloc : frais, même terrain et mêmes chaussures, 3 essais, garder le meilleur. Distances en pieds. Les résultats se notent dans la séance de tests de la semaine.</div>
     ${tests.length ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Longueur</th><th>3 plyos</th><th>1 pied G</th><th>1 pied D</th><th>Climb-up niv.</th><th>Qualité</th><th>Difficulté</th><th>Note</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
-      : `<div class="muted">Aucun test enregistré. Les prochaines sessions de tests sont marquées dans le calendrier.</div>`}
+      : `<div class="muted">Aucun test enregistré pour l'instant.</div>`}
   </section>`;
 }
 /* ---------- charts ---------- */
@@ -1794,6 +1842,7 @@ async function addPhotos(files){
   else if (["calendrier","semaine","suivi","nutrition","donnees"].includes(h)) S.view = h;
 })();
 document.getElementById("sync").addEventListener("click", () => setView("donnees"));
+document.getElementById("gear").addEventListener("click", () => setView("donnees"));
 function showLogin(msg){ const l = document.getElementById("login"); l.hidden = false; const er = document.getElementById("l-err"); er.hidden = !msg; er.textContent = msg || ""; try { document.getElementById("l-mail").focus(); } catch(e) {} }
 async function enter(user){
   UID = user.id; EMAIL = user.email || ""; document.getElementById("login").hidden = true;
