@@ -428,6 +428,24 @@ body.ov-open{overflow:hidden}
 .bv-ic{font-size:56px;line-height:1}
 .bv-t{margin:0;font-weight:600}
 .bv-note{width:min(360px,100%);text-align:left;margin-top:12px}
+.tag.mod{background:var(--sun-soft);color:var(--ink);font-size:11px;padding:1px 7px}
+.sheet{position:relative}
+.sh-foot.two{display:flex;gap:8px}
+.sh-foot.two .btn:not(.big){justify-content:center;padding:13px 16px}
+.sh-it.ed{padding:2px 0}
+.sh-it.ed.off .sh-nm{color:var(--ink-3);text-decoration:line-through}
+.ed-row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:flex-end;margin-top:6px}
+.ed-f{display:flex;flex-direction:column;gap:3px}
+.ed-s{display:flex;align-items:center;border:1px solid var(--line);border-radius:12px;background:var(--page);overflow:hidden}
+.ed-s.ch{border-color:var(--accent);background:var(--accent-soft)}
+.ed-s button{all:unset;cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700}
+.ed-s button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ed-s b{min-width:44px;padding:0 4px;text-align:center;font-variant-numeric:tabular-nums;font-size:14.5px;white-space:nowrap}
+.ed-off{align-self:flex-end}
+.ask{position:absolute;inset:0;background:rgba(246,247,244,.92);display:flex;align-items:flex-end;justify-content:center;padding:16px;border-radius:inherit;z-index:2}
+.ask-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:440px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.ask-card h3{font-size:19px;margin:0}
+.ask-card p{margin:0 0 4px;font-size:13.5px;color:var(--ink-2)}
 </style>
 </head>
 <body>
@@ -550,36 +568,70 @@ function planOf(id){
 /* Reps qui changent au fil du bloc (it.wave, une valeur par semaine du bloc) et décharge
    automatique (≈ 45 % de séries en moins, mêmes charges) quand la semaine suit le modèle du bloc. */
 const cutSets = n => Math.max(1, Math.round(n * 0.55));
-function resolveWeek(ss, w, b, fromTpl){
-  if (!w || !b) return ss;
-  const idx = blockWeeks(b).indexOf(w.id); const dl = fromTpl && b.deload === w.id;
-  if (idx < 0) return ss;
-  return ss.map(s => {
-    const hasWave = (s.blocks || []).some(bl => (bl.items || []).some(it => it.wave));
-    if (!hasWave && !dl) return s;
-    return { ...s, title: dl && s.title && !/décharge/i.test(s.title) ? s.title + " (décharge)" : s.title,
-      blocks: (s.blocks || []).map(bl => ({ ...bl, rounds: dl && typeof bl.rounds === "number" ? cutSets(bl.rounds) : bl.rounds,
-        items: (bl.items || []).map(it => {
-          let x = it;
-          if (it.wave && it.wave.length) x = { ...x, reps: it.wave[Math.min(idx, it.wave.length - 1)] };
-          if (dl && typeof x.sets === "number") x = { ...x, sets: cutSets(x.sets) };
-          return x; }) })) };
-  });
+/* Modifications faites dans l'app (jamais écrasées par une mise à jour du programme) :
+   - pour une seule semaine : logs[semaine].mods["séance:exercice"] = { sets, reps, load, off }
+   - pour la suite du bloc : config/mods.list = [{ block, from, key, at, sets, reps | repsDelta, load, off }]
+   La logique de progression reste au-dessus : vagues de reps décalées, charge qui repart de la nouvelle base, décharge. */
+const fwdMods = () => ((S.data.config.mods || {}).list || []);
+const byFrom = (x, y) => x.from < y.from ? -1 : x.from > y.from ? 1 : (x.at || 0) - (y.at || 0);
+const shiftReps = (t, d) => d ? String(t).replace(/\d+/g, n => String(Math.max(1, +n + d))) : t;
+function resolveItem(s, it, idx, dl, fmods, wmods){
+  const key = s.id + ":" + it.id; const fm = fmods.filter(m => m.key === key).sort(byFrom); const wm = wmods[key];
+  if (!fm.length && !wm && !(it.wave && idx >= 0) && !dl) return it;
+  const x = { ...it }; let delta = 0, fixed = false;
+  for (const m of fm) {
+    if (m.sets != null) x.sets = m.sets;
+    if (m.reps != null) { x.reps = m.reps; fixed = true; delta = 0; }
+    if (m.repsDelta != null) { delta = m.repsDelta; fixed = false; }
+    if (m.off != null) x.off = m.off;
+  }
+  if (it.wave && it.wave.length && idx >= 0 && !fixed) x.reps = shiftReps(it.wave[Math.min(idx, it.wave.length - 1)], delta);
+  if (dl && typeof x.sets === "number") x.sets = cutSets(x.sets);
+  if (wm) { if (wm.sets != null) x.sets = wm.sets; if (wm.reps != null) x.reps = wm.reps; if (wm.off != null) x.off = wm.off; }
+  if (fm.length || wm) x.mod = true;
+  return x;
 }
-/* Charge proposée : la dernière charge notée sur cet exercice dans le bloc, + la progression prévue (it.step)
-   si les reps prévues ont été faites. Pas de hausse en semaine de décharge. Sinon : la charge du programme. */
+function resolveWeek(ss, w, b, fromTpl){
+  if (!w) return ss;
+  const idx = b ? blockWeeks(b).indexOf(w.id) : -1; const dl = !!(fromTpl && b && b.deload === w.id);
+  const wmods = (S.data.logs[w.id] && S.data.logs[w.id].mods) || {};
+  const fmods = b ? fwdMods().filter(m => m.block === b.id && m.from <= w.id) : [];
+  const anyWave = idx >= 0 && ss.some(s => (s.blocks || []).some(bl => (bl.items || []).some(it => it.wave)));
+  if (!dl && !anyWave && !fmods.length && !Object.keys(wmods).length) return ss;
+  return ss.map(s => ({ ...s, title: dl && s.title && !/décharge/i.test(s.title) ? s.title + " (décharge)" : s.title,
+    blocks: (s.blocks || []).map(bl => {
+      const items = (bl.items || []).map(it => resolveItem(s, it, idx, dl, fmods, wmods));
+      const changed = items.some(x => x.mod);
+      const rounds = changed && typeof bl.rounds === "number" ? Math.max(1, ...items.filter(x => !x.off && typeof x.sets === "number").map(x => x.sets))
+        : dl && typeof bl.rounds === "number" ? cutSets(bl.rounds) : bl.rounds;
+      return { ...bl, rounds, items };
+    }) }));
+}
+/* Charge proposée, du plus récent au plus ancien :
+   1. une charge modifiée pour cette semaine → telle quelle ;
+   2. une charge modifiée plus récente que la dernière séance notée → nouvelle base + la progression prévue ;
+   3. la dernière charge notée dans le bloc + la progression prévue (it.step), si les reps prévues ont été faites ;
+   4. sinon la charge du programme. Pas de hausse en semaine de décharge. */
 function loadPlan(wk, s, it){
   const lr = numRange(it.load); if (!lr) return null;
-  const w = weekById(wk); const b = w && blockOf(w); const key = s.id + ":" + it.id;
+  const w = weekById(wk); const b = w && blockOf(w); const key = s.id + ":" + it.id; const r2 = v => Math.round(v * 100) / 100;
+  const wm = S.data.logs[wk] && S.data.logs[wk].mods && S.data.logs[wk].mods[key];
+  if (wm && wm.load != null) return { base: wm.load, from: wk, up: 0, missed: false, src: "mod" };
+  const fm = b ? fwdMods().filter(m => m.block === b.id && m.key === key && m.load != null && m.from <= wk).sort(byFrom).pop() : null;
+  if (fm && fm.from === wk) return { base: fm.load, from: wk, up: 0, missed: false, src: "mod" };
+  let last = null;
   if (b) for (const id of blockWeeks(b).filter(x => x < wk).reverse()) {
     const a = S.data.logs[id] && S.data.logs[id].actual && S.data.logs[id].actual[key];
-    const v = a && numOrNull(a.load); if (v == null) continue;
-    const pit = itemOf(id, s.id, it.id); const need = pit ? numRange(pit.reps) : null; const got = numOrNull(a.reps);
-    const missed = !!(need && got != null && got < need[0]);
-    const up = it.step && !isDeload(w) && !missed ? it.step : 0;
-    return { base: Math.round((v + up) * 100) / 100, from: id, up, missed };
+    const v = a && numOrNull(a.load); if (v != null) { last = { id, v, a }; break; }
   }
-  return { base: lr[0], from: null, up: 0, missed: false };
+  const step = it.step && !isDeload(w) ? it.step : 0;
+  if (fm && (!last || fm.from > last.id)) return { base: r2(fm.load + step), from: fm.from, up: step, missed: false, src: "mod" };
+  if (last) {
+    const pit = itemOf(last.id, s.id, it.id); const need = pit ? numRange(pit.reps) : null; const got = numOrNull(last.a.reps);
+    const missed = !!(need && got != null && got < need[0]); const up = missed ? 0 : step;
+    return { base: r2(last.v + up), from: last.id, up, missed, src: "log" };
+  }
+  return { base: lr[0], from: null, up: 0, missed: false, src: "prog" };
 }
 const tracked = id => id >= (cfg().trackingFrom || "0000");
 const sessWeight = s => s.weight ?? (s.kind === "endurance" || s.id === "s-pk2" ? 0.7 : 1);
@@ -732,7 +784,7 @@ function scheduleRender(){ if (editing()) { pendingRender = true; return; } canc
 app.addEventListener("focusout", () => setTimeout(() => { if (pendingRender && !editing()) { pendingRender = false; render(); } }, 60));
 
 function setView(v, week){
-  S.view = v; if (week) S.week = week; S.confirm = null;
+  S.view = v; if (week) S.week = week; S.confirm = null; if (S.ui.ov) { S.ui.ov = null; S.ui.edit = null; S.run = null; clearInterval(RUN.iv); RUN.iv = null; }
   try { history.replaceState(null, "", "#" + (v === "semaine" && S.week ? "s-" + S.week : v)); } catch(e) {}
   render(); window.scrollTo(0,0);
 }
@@ -966,7 +1018,7 @@ function sessRow(wk, s, log){
 }
 function rxOf(wk, s, it){
   const lp = it.load && it.unit !== "reps" && !it.tests ? loadPlan(wk, s, it) : null;
-  const ld = lp && lp.from ? "≈ " + (/^\s*\+/.test(it.load) ? "+" : "") + fmtNum(lp.base, 2) + " kg" : it.load;
+  const ld = lp && lp.src !== "prog" ? "≈ " + (/^\s*\+/.test(it.load) ? "+" : "") + fmtNum(lp.base, 2) + " kg" : it.load;
   return [it.sets && it.reps ? it.sets + " × " + it.reps : (it.reps || (it.sets ? it.sets + " séries" : "")), ld ? "@ " + ld : ""].filter(Boolean).join(" ");
 }
 function doneLine(a){
@@ -983,24 +1035,106 @@ function doneLine(a){
 }
 const kindLabel = b => SS_KINDS[b.kind] ? SS_KINDS[b.kind] + (b.name ? " · " + b.name : "") : (b.name || "");
 function showSheet(wk, s, log){
+  const E = S.ui.edit && S.ui.edit.sid === s.id && S.ui.edit.wk === wk ? S.ui.edit : null;
   let L = 0;
   const body = (s.blocks || []).map(b => {
-    const grp = SS_KINDS[b.kind]; const letter = grp ? String.fromCharCode(65 + L++) : ""; const items = b.items || [];
+    const grp = SS_KINDS[b.kind]; const all = b.items || []; const letter = grp && all.length ? String.fromCharCode(65 + L++) : "";
+    const items = all.map((it, i) => ({ it, i })).filter(x => E || !x.it.off); if (!items.length) return "";
     return `<div class="sh-b">
-      <div class="sh-bh">${grp ? `<span class="ssl" aria-hidden="true">${letter}</span>` : ""}<b>${esc(kindLabel(b))}</b>${b.rounds ? `<span class="tag">${b.rounds} tours</span>` : ""}</div>
-      ${b.rule || b.note ? `<p class="sh-rule">${esc(b.rule || b.note)}</p>` : ""}
-      ${items.map((it, i) => { const code = grp ? (items.length > 1 ? letter + (i+1) : letter) : ""; const zk = wk + ":show:" + s.id + ":" + it.id; const big = S.ui.zoom === zk;
+      <div class="sh-bh">${grp ? `<span class="ssl" aria-hidden="true">${letter}</span>` : ""}<b>${esc(kindLabel(b))}</b>${b.rounds && !E ? `<span class="tag">${b.rounds} tours</span>` : ""}</div>
+      ${(b.rule || b.note) && !E ? `<p class="sh-rule">${esc(b.rule || b.note)}</p>` : ""}
+      ${items.map(({ it, i }) => { const code = grp ? (all.length > 1 ? letter + (i+1) : letter) : ""; const key = s.id + ":" + it.id;
+        const nm = `<div class="sh-nm">${code ? `<span class="code">${code}</span>` : ""}<span>${esc(it.name)}</span>${it.mod && !E ? `<span class="tag mod">modifié</span>` : ""}</div>`;
+        if (E) return edItem(E, key, it, nm);
+        const zk = wk + ":show:" + key; const big = S.ui.zoom === zk;
         return `<div class="sh-it ${big ? "zoomed" : ""}">${it.img ? `<button class="thumb ${big ? "big" : ""}" data-action="zoom" data-k="${esc(zk)}" aria-label="${big ? "Réduire" : "Agrandir"} l'image : ${esc(it.name)}"><img src="${BLANK}" data-mpath="${esc(mediaPath(it.img))}" alt="${esc(it.name)}"></button>` : ""}
-          <div class="sh-tx"><div class="sh-nm">${code ? `<span class="code">${code}</span>` : ""}<span>${esc(it.name)}</span></div>
+          <div class="sh-tx">${nm}
           <div class="sh-rx">${esc(rxOf(wk, s, it)) || "—"}${it.rest ? ` · repos ${esc(it.rest)}` : ""}</div>
-          ${it.cue ? `<div class="sh-cue">${esc(it.cue)}</div>` : ""}${doneLine(log.actual && log.actual[s.id + ":" + it.id])}</div></div>`; }).join("")}
+          ${it.cue ? `<div class="sh-cue">${esc(it.cue)}</div>` : ""}${doneLine(log.actual && log.actual[key])}</div></div>`; }).join("")}
     </div>`;
   }).join("");
-  return `<div class="ov" role="dialog" aria-modal="true" aria-labelledby="sh-title"><div class="scrim" data-action="ov-close"></div>
-    <div class="sheet"><div class="sh-head"><div><div class="row">${fxIcons(s)}${s.min || s.duration ? `<span class="muted" style="font-size:12.5px">${s.min ? "≈ " + fmtMin(s.min) : esc(s.duration)}</span>` : ""}</div><h2 id="sh-title">${esc(s.title)}</h2></div>
-      <button class="x" data-action="ov-close" aria-label="Fermer">✕</button></div>
-      <div class="sh-body">${s.note ? `<p class="sh-note">${esc(s.note)}</p>` : ""}${body}</div>
-      ${runSteps(s).length ? `<div class="sh-foot"><button class="btn primary big" data-action="run" data-sid="${esc(s.id)}">Démarrer</button></div>` : ""}</div></div>`;
+  const w = weekById(wk); const b = w && blockOf(w);
+  const ask = E && E.ask ? `<div class="ask" role="alertdialog" aria-labelledby="ask-t"><div class="ask-card">
+      <h3 id="ask-t">Appliquer aux prochaines séances ?</h3>
+      <p>Du cycle en cours, jusqu'à ${wkLabel(blockWeeks(b).slice(-1)[0])}. La progression prévue continue à partir de tes nouvelles valeurs : la charge monte chaque semaine, les reps suivent la vague du bloc, la décharge reste.</p>
+      <button class="btn primary big" data-action="ed-save" data-scope="fwd">Oui, aux prochaines aussi</button>
+      <button class="btn big" data-action="ed-save" data-scope="week">Non, cette séance seulement</button>
+      <button class="btn ghost" data-action="ed-ask-cancel">Retour</button></div></div>` : "";
+  const foot = E ? `<div class="sh-foot two"><button class="btn" data-action="ed-cancel">Annuler</button><button class="btn primary big" data-action="ed-done">Enregistrer</button></div>`
+    : runSteps(s).length ? `<div class="sh-foot"><button class="btn primary big" data-action="run" data-sid="${esc(s.id)}">Démarrer</button></div>` : "";
+  return `<div class="ov" role="dialog" aria-modal="true" aria-labelledby="sh-title"><div class="scrim" data-action="${E ? "ed-cancel" : "ov-close"}"></div>
+    <div class="sheet"><div class="sh-head"><div>${E ? `<span class="eyebrow">Modifier · ${wkLabel(wk)}</span>` : `<div class="row">${fxIcons(s)}${s.min || s.duration ? `<span class="muted" style="font-size:12.5px">${s.min ? "≈ " + fmtMin(s.min) : esc(s.duration)}</span>` : ""}</div>`}<h2 id="sh-title">${esc(s.title)}</h2></div>
+      <div class="row" style="flex-wrap:nowrap">${E ? "" : `<button class="btn small" data-action="ed-start" data-sid="${esc(s.id)}">Modifier</button>`}<button class="x" data-action="${E ? "ed-cancel" : "ov-close"}" aria-label="${E ? "Annuler les modifications" : "Fermer"}">✕</button></div></div>
+      <div class="sh-body">${s.note && !E ? `<p class="sh-note">${esc(s.note)}</p>` : ""}${body}</div>${foot}${ask}</div></div>`;
+}
+/* ---------- modifier une séance ---------- */
+const repsEditable = t => /^\s*\d+(\s*[–-]\s*\d+)?(\s*\/\s*jambe)?\s*$/.test(String(t || ""));
+function edStart(sid){
+  const wk = S.week; const s = planOf(wk).sessions.find(x => x.id === sid); if (!s) return;
+  const v = {}, items = {};
+  (s.blocks || []).forEach(b => (b.items || []).forEach(it => {
+    const key = s.id + ":" + it.id; items[key] = it;
+    const lp = hasKg(it) ? loadPlan(wk, s, it) : null;
+    v[key] = { sets: typeof it.sets === "number" ? it.sets : null, reps: repsEditable(it.reps) ? String(it.reps).trim() : null, load: lp ? lp.base : null, off: !!it.off };
+  }));
+  S.ui.edit = { sid, wk, v, init: clone(v), items, ask: false };
+}
+function edItem(E, key, it, nm){
+  const v = E.v[key]; const i0 = E.init[key];
+  const stp = (label, f, val, ch) => `<div class="ed-f"><span class="lgl">${label}</span><div class="ed-s ${ch ? "ch" : ""}"><button data-action="ed" data-k="${esc(key)}" data-f="${f}" data-d="-1" aria-label="${label} : moins">−</button><b>${esc(val)}</b><button data-action="ed" data-k="${esc(key)}" data-f="${f}" data-d="1" aria-label="${label} : plus">+</button></div></div>`;
+  return `<div class="sh-it ed ${v.off ? "off" : ""}"><div class="sh-tx">${nm}
+    <div class="ed-row">${v.off ? `<span class="muted" style="font-size:13px">Retiré de la séance</span>` : `${v.sets != null ? stp("Séries", "sets", String(v.sets), v.sets !== i0.sets) : ""}${v.reps != null ? stp("Reps", "reps", v.reps, v.reps !== i0.reps) : ""}${v.load != null ? stp("Charge", "load", kgTxt(it, v.load), v.load !== i0.load) : ""}`}
+      <button class="btn small ${v.off ? "" : "ghost"} ed-off" data-action="ed-off" data-k="${esc(key)}">${v.off ? "Remettre" : "Retirer"}</button></div></div></div>`;
+}
+function edChanges(E){
+  const out = {};
+  Object.entries(E.v).forEach(([k, v]) => { const i = E.init[k]; const c = {}; ["sets","reps","load","off"].forEach(f => { if (v[f] !== i[f]) c[f] = v[f]; }); if (Object.keys(c).length) out[k] = c; });
+  return out;
+}
+function edSave(scope){
+  const E = S.ui.edit; if (!E) return; const ch = edChanges(E); const w = weekById(E.wk); const b = w && blockOf(w);
+  if (Object.keys(ch).length) {
+    if (scope === "fwd" && b) {
+      const list = [...fwdMods()]; const at = Date.now(); const idx = blockWeeks(b).indexOf(E.wk);
+      Object.entries(ch).forEach(([k, c]) => {
+        const it = E.items[k]; const m = { block: b.id, from: E.wk, key: k, at };
+        if (c.sets !== undefined) m.sets = c.sets;
+        if (c.off !== undefined) m.off = c.off;
+        if (c.load !== undefined) m.load = c.load;
+        if (c.reps !== undefined) {
+          if (it.wave && it.wave.length && idx >= 0) { const w0 = numRange(it.wave[Math.min(idx, it.wave.length - 1)]); const nv = numRange(c.reps); m.repsDelta = nv && w0 ? nv[0] - w0[0] : 0; }
+          else m.reps = c.reps;
+        }
+        list.push(m);
+      });
+      put("config", "mods", { list });
+      const wm = S.data.logs[E.wk] && S.data.logs[E.wk].mods;
+      if (wm && Object.keys(ch).some(k => wm[k])) patchLog(E.wk, l => { Object.entries(ch).forEach(([k, c]) => { if (!l.mods[k]) return; Object.keys(c).forEach(f => delete l.mods[k][f]); if (!Object.keys(l.mods[k]).length) delete l.mods[k]; }); });
+    } else patchLog(E.wk, l => { l.mods ||= {}; Object.entries(ch).forEach(([k, c]) => { l.mods[k] = { ...(l.mods[k] || {}), ...c }; }); });
+    toast(scope === "fwd" ? "Modifié pour cette séance et les suivantes du bloc" : "Modifié pour cette séance");
+  }
+  S.ui.edit = null; render();
+}
+function edAction(a, b){
+  const E = S.ui.edit;
+  if (a === "ed-start") { edStart(b.dataset.sid); render(); return; }
+  if (!E) return;
+  if (a === "ed") {
+    const k = b.dataset.k, f = b.dataset.f, d = +b.dataset.d; const v = E.v[k]; const it = E.items[k];
+    if (f === "sets") v.sets = Math.max(1, v.sets + d);
+    else if (f === "reps") v.reps = shiftReps(v.reps, d);
+    else if (f === "load") { const inc = /^\s*\+/.test(it.load || "") ? 1 : 2.5; v.load = Math.max(0, Math.round((v.load + d * inc) * 100) / 100); }
+  }
+  else if (a === "ed-off") { const v = E.v[b.dataset.k]; v.off = !v.off; }
+  else if (a === "ed-cancel") S.ui.edit = null;
+  else if (a === "ed-ask-cancel") E.ask = false;
+  else if (a === "ed-done") {
+    if (!Object.keys(edChanges(E)).length) S.ui.edit = null;
+    else { const w = weekById(E.wk); const bl = w && blockOf(w); const future = bl && blockWeeks(bl).some(x => x > E.wk) && !isDeload(w);
+      if (future) E.ask = true; else { edSave("week"); return; } }
+  }
+  else if (a === "ed-save") { edSave(b.dataset.scope); return; }
+  render();
 }
 
 /* Une étape = une série d'un exercice. Superset : on tourne A1, A2, A1, A2…
@@ -1016,18 +1150,18 @@ function restSeq(b){
 function runSteps(s){
   const steps = []; let L = 0;
   (s.blocks || []).forEach(b => {
-    const items = b.items || []; if (!items.length) return;
-    const grp = !!SS_KINDS[b.kind]; const letter = grp ? String.fromCharCode(65 + L++) : "";
-    const code = i => grp ? (items.length > 1 ? letter + (i+1) : letter) : "";
+    const all = b.items || []; const grp = !!SS_KINDS[b.kind]; const letter = grp && all.length ? String.fromCharCode(65 + L++) : "";
+    const items = all.map((it, i) => ({ it, i })).filter(x => !x.it.off); if (!items.length) return;
+    const code = i => grp ? (all.length > 1 ? letter + (i+1) : letter) : "";
     const n = it => typeof it.sets === "number" && it.sets > 0 ? it.sets : 1;
     const mk = (it, i, set, rest) => ({ key: s.id + ":" + it.id, it, code: code(i), set, of: n(it), rest, bname: kindLabel(b) });
     if (grp) {
-      const seq = restSeq(b); const R = Math.max(...items.map(n));
+      const seq = restSeq(b); const R = Math.max(...items.map(x => n(x.it)));
       for (let r = 1; r <= R; r++) {
-        const here = items.map((it, i) => ({ it, i })).filter(x => n(x.it) >= r);
-        here.forEach((x, j) => steps.push(mk(x.it, x.i, r, j === here.length - 1 ? (seq[items.length - 1] || 0) : (seq[x.i] || 0))));
+        const here = items.filter(x => n(x.it) >= r);
+        here.forEach((x, j) => steps.push(mk(x.it, x.i, r, j === here.length - 1 ? (seq[all.length - 1] || 0) : (seq[x.i] || 0))));
       }
-    } else items.forEach((it, i) => { const rs = restSec(it.rest); for (let r = 1; r <= n(it); r++) steps.push(mk(it, i, r, r < n(it) ? (rs || 60) : rs)); });
+    } else items.forEach(({ it, i }) => { const rs = restSec(it.rest); for (let r = 1; r <= n(it); r++) steps.push(mk(it, i, r, r < n(it) ? (rs || 60) : rs)); });
   });
   return steps;
 }
@@ -1123,7 +1257,7 @@ function ovOpen(type, sid){
 }
 function ovClose(fromPop){
   const wasRun = S.ui.ov && S.ui.ov.type === "run";
-  S.ui.ov = null; S.run = null; clearInterval(RUN.iv); RUN.iv = null;
+  S.ui.ov = null; S.ui.edit = null; S.run = null; clearInterval(RUN.iv); RUN.iv = null;
   if (wasRun) { try { RUN.lock && RUN.lock.release(); } catch(e) {} RUN.lock = null; }
   if (!fromPop) { try { if (history.state && history.state.ov) history.back(); } catch(e) {} }
   render();
@@ -1537,6 +1671,7 @@ app.addEventListener("click", async e => {
   else if (a === "run") { runStart(b.dataset.sid); }
   else if (a === "ov-close") { ovClose(); }
   else if (a.startsWith("run-")) { runAction(a, b); }
+  else if (a.startsWith("ed")) { edAction(a, b); }
   else if (a === "del-ev" || a === "del-phase" || a === "del-test" || a === "del-block") {
     const key = {"del-ev":"ev:","del-phase":"ph:","del-test":"test:","del-block":"bl:"}[a] + b.dataset.id;
     if (S.confirm !== key) { S.confirm = key; render(); return; }
